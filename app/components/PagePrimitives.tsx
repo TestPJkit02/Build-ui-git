@@ -102,11 +102,7 @@ export interface DegradedBannerProps {
 /** Red-tinted alert banner used when fallback data is in use. */
 export function DegradedBanner({ headline, error }: DegradedBannerProps) {
   return (
-    <div
-      role="alert"
-      className="panel border-l-2 border-l-accent-red"
-      style={{ borderLeftColor: "var(--accent-red)" }}
-    >
+    <div role="alert" className="panel border-l-2 border-l-accent-red">
       <div className="px-4 py-3 flex flex-wrap items-start gap-3 text-[12px]">
         <span className="label-tag label-tag-red flex items-center gap-1.5">
           <span className="status-dot status-dot-red pulse" />
