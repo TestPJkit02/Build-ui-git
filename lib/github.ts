@@ -2,14 +2,28 @@ import type { Repo } from "./types";
 
 const SEARCH_URL = "https://api.github.com/search/repositories";
 
-/** Pre-baked AI search query targeting trending repos pushed in the last 30 days. */
+/**
+ * Pre-baked AI search query targeting trending repos pushed in the last
+ * `daysWindow` days.
+ *
+ * Note: GitHub's Search API does NOT support disjunctive `topic:X OR topic:Y`
+ * grouping — that form is rejected with `Validation Failed` (or silently
+ * returns 0 results). Earlier versions of this function used
+ * `(topic:ai OR topic:llm OR ...) stars:>=200 pushed:>=...` and were
+ * therefore always returning empty, causing the page to fall back to the
+ * static curated list even when a `GITHUB_TOKEN` was supplied.
+ *
+ * The fix is to drop the per-keyword `topic:` qualifier and use a single
+ * keyword disjunction with `in:topics,description`, which IS supported and
+ * matches a repo whose topic OR description contains any of the keywords.
+ */
 export function buildAiQuery(daysWindow = 30): string {
   const since = new Date(Date.now() - daysWindow * 86400 * 1000)
     .toISOString()
     .slice(0, 10);
-  const topics = ["ai", "llm", "agents", "rag", "machine-learning", "deep-learning"];
-  const topicClause = topics.map((t) => `topic:${t}`).join(" OR ");
-  return `(${topicClause}) stars:>=200 pushed:>=${since}`;
+  const keywords = ["ai", "llm", "agents", "rag", "machine-learning", "deep-learning"];
+  const keywordClause = keywords.join(" OR ");
+  return `(${keywordClause}) in:topics,description stars:>=200 pushed:>=${since}`;
 }
 
 interface GitHubSearchResponse {

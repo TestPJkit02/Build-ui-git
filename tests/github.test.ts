@@ -2,12 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAiQuery, fetchAiRepos } from "../lib/github";
 
 describe("buildAiQuery", () => {
-  it("contains the AI topic disjunction", () => {
+  it("contains the AI keyword disjunction with in:topics,description qualifier", () => {
     const q = buildAiQuery();
-    expect(q).toContain("topic:ai");
-    expect(q).toContain("topic:llm");
-    expect(q).toContain("topic:agents");
+    // Keywords appear as plain disjunction inside parens, NOT as topic:X.
+    // GitHub Search API rejects (topic:X OR topic:Y) — that form returns 0
+    // results / Validation Failed. See lib/github.ts header comment.
+    expect(q).toContain("ai OR llm");
+    expect(q).toContain("agents");
+    expect(q).toContain("rag");
+    expect(q).toContain("in:topics,description");
     expect(q).toContain("stars:>=200");
+    // Guardrail: must NOT use the broken topic:X OR topic:Y form.
+    expect(q).not.toMatch(/topic:[a-z-]+\s+OR\s+topic:/);
   });
 
   it("uses an ISO date for the pushed filter", () => {
