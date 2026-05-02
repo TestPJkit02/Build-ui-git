@@ -219,10 +219,10 @@
   }
   .ascii-bracket::before {
     content: "[ ";
-    color: var(--text-muted);
+    color: rgb(var(--text-muted));
   }
   .ascii-bracket::after {
     content: " ]";
-    color: var(--text-muted);
+    color: rgb(var(--text-muted));
   }
 }
