@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "Rename to team.json to enable team-mode gate enforcement.",
+    "When team.json is present, /vck-ship Bước 0 will refuse to merge",
+    "until every gate listed below has run during the current cycle.",
+    "Drop or comment-out gates the team does not enforce."
+  ],
+  "team_id": "your-team-slug-here",
+  "required_gates": [
+    "/vck-review",
+    "/vck-qa-only"
+  ],
+  "learnings_required": false
+}
