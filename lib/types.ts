@@ -34,8 +34,14 @@ export interface Repo {
 
 export interface RankedRepo extends Repo {
   category: Category;
+  /** Composite ranking score (stars + forks + recency). See lib/rank.ts. */
   score: number;
+  /** Trend score (stars per day since creation). See lib/rank.ts. */
+  trend_score?: number;
 }
+
+export type SortKey = "stars" | "forks" | "score" | "trend_score" | "updated" | "created";
+export type SortDir = "asc" | "desc";
 
 export interface NewsStory {
   id: string;

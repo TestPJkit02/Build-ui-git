@@ -1,4 +1,4 @@
-import { fetchAiRepos } from "@/lib/github";
+import { clampLimit, fetchAiRepos } from "@/lib/github";
 import { rankRepos } from "@/lib/rank";
 import { classifyCategory, ALL_CATEGORIES } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
@@ -8,9 +8,11 @@ import type { RankedRepo, Category } from "@/lib/types";
 
 export const revalidate = 600;
 
-async function loadRanked(): Promise<{ rows: RankedRepo[]; degraded: boolean }> {
+const DEFAULT_LIMIT = 50;
+
+async function loadRanked(limit: number): Promise<{ rows: RankedRepo[]; degraded: boolean }> {
   try {
-    const raw = await fetchAiRepos(50);
+    const raw = await fetchAiRepos(limit);
     const list = raw.length > 0 ? raw : FALLBACK_REPOS;
     const ranked = rankRepos(list).map((r) => ({
       ...r,
@@ -60,8 +62,15 @@ function aggregate(rows: RankedRepo[]) {
   return { totalStars, totalForks, categoryRows, cumulative };
 }
 
-export default async function StatsPage() {
-  const { rows, degraded } = await loadRanked();
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function StatsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const limitParam = Array.isArray(params.limit) ? params.limit[0] : params.limit;
+  const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
+  const { rows, degraded } = await loadRanked(limit);
   const agg = aggregate(rows);
   const updated24h = rows.filter((r) => {
     const t = Date.parse(r.pushed_at);

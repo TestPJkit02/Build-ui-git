@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/", label: "Repos" },
+  { href: "/new", label: "New" },
   { href: "/news", label: "News" },
   { href: "/stats", label: "Stats" },
 ];
