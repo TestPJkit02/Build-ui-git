@@ -19,9 +19,11 @@ describe("classifyCategory", () => {
     expect(classifyCategory({ topics: ["autogpt"], description: null })).toBe("Agents");
     // ChatGPT-style topic still classified as LLM via the longer "chatgpt" keyword
     expect(classifyCategory({ topics: ["chatgpt"], description: null })).toBe("LLM");
-    // Plain "gpt" / "gpt-4" topic still classified as LLM (whole-word match)
+    // Plain "gpt" / "gpt-4" / "gpt4" topic still classified as LLM (leading-boundary match)
     expect(classifyCategory({ topics: ["gpt"], description: null })).toBe("LLM");
     expect(classifyCategory({ topics: ["gpt-4"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["gpt4"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["gpt2"], description: null })).toBe("LLM");
   });
 
   it("does not let short RAG keyword 'rag' substring-match unrelated words", () => {
@@ -31,6 +33,21 @@ describe("classifyCategory", () => {
     expect(
       classifyCategory({ topics: [], description: "RAG pipeline tutorial" }),
     ).toBe("RAG");
+    // "rag" topic and "rag-pipeline" topic both classify as RAG (leading-boundary)
+    expect(classifyCategory({ topics: ["rag"], description: null })).toBe("RAG");
+    expect(classifyCategory({ topics: ["rag-pipeline"], description: null })).toBe("RAG");
+  });
+
+  it("still matches digit-suffixed AI compound topics (regression for #2/#3)", () => {
+    // llama2 / llama3 / codellama — Meta's Llama family
+    expect(classifyCategory({ topics: ["llama2"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["llama3"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["codellama"], description: null })).toBe("LLM");
+    // yolov5 / yolov8 — popular YOLO object-detection variants
+    expect(classifyCategory({ topics: ["yolov5"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov8"], description: null })).toBe("Vision");
+    // "agents" plural topic
+    expect(classifyCategory({ topics: ["agents"], description: null })).toBe("Agents");
   });
 
   it("classifies RAG by retrieval-augmented topic", () => {

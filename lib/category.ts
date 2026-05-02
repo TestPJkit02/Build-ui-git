@@ -42,11 +42,20 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
 
 /**
  * Match a keyword against a haystack with smarter rules:
- *   - Short single-token keywords (≤ 5 chars, no whitespace/hyphen) require a
- *     word-boundary match. This prevents the LLM keyword "gpt" from matching
- *     inside the Agents topic "autogpt", or "rag" matching inside "fragment".
- *   - Longer or multi-token keywords use plain substring match so we can
- *     still catch phrases like "language-model" or "retrieval augmented".
+ *   - Very short ambiguous keywords (≤ 3 chars, no whitespace/hyphen) require
+ *     the keyword to be at a *word start* (leading word-boundary `\bkw`). This
+ *     stops "gpt" from matching inside "autogpt"/"chatgpt", "rag" inside
+ *     "fragment", "llm" inside random words, etc. — but still allows compound
+ *     topics where the keyword leads, like "gpt-4", "gpt4", "rag-pipeline",
+ *     "llms", "asr-models".
+ *   - Everything else (≥ 4 chars or multi-token) uses plain substring match so
+ *     the classifier still catches "language-model", "retrieval augmented",
+ *     "yolov5", "llama2", "codellama", "agents", etc.
+ *
+ * Why `\bkw` (leading) instead of `\bkw\b` (both sides): `\b` does not exist
+ * between a letter and a digit (both are `\w`), so `\bgpt\b` would miss
+ * "gpt4" / "gpt2", and `\byolo\b` would miss "yolov5" — those are extremely
+ * common AI topics on GitHub.
  */
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -54,8 +63,8 @@ function escapeRegex(s: string): string {
 
 function matchKeyword(haystack: string, keyword: string): boolean {
   const needle = keyword.toLowerCase();
-  if (needle.length <= 5 && !/[\s-]/.test(needle)) {
-    const re = new RegExp(`\\b${escapeRegex(needle)}\\b`);
+  if (needle.length <= 3 && !/[\s-]/.test(needle)) {
+    const re = new RegExp(`\\b${escapeRegex(needle)}`);
     return re.test(haystack);
   }
   return haystack.includes(needle);
