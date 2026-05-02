@@ -20,6 +20,18 @@ const ALL_CATEGORIES: Category[] = [
   "Other",
 ];
 
+/** Status-dot color used for category indicators on rows + filter pills. */
+const CATEGORY_DOT: Record<Category, string> = {
+  LLM: "status-dot-cyan",
+  Agents: "status-dot-magenta",
+  RAG: "status-dot-amber",
+  Vision: "status-dot-green",
+  Audio: "status-dot-red",
+  Image: "status-dot-magenta",
+  Tooling: "status-dot-cyan",
+  Other: "status-dot-dim",
+};
+
 interface RepoTableProps {
   rows: RankedRepo[];
   /** Default sort key applied when `?sort=` is missing. */
@@ -111,21 +123,29 @@ export function RepoTable({
           updateParams({ category: null, minStars: null, q: null, sort: null, dir: null })
         }
       />
-      <div className="text-xs text-slate-500 flex items-center justify-between">
-        <span>
-          Showing <strong>{visible.length}</strong> of {rows.length} fetched repos
-          {isPending && <span className="ml-2 text-slate-400">(updating…)</span>}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-fg-muted px-1">
+        <span className="flex items-center gap-2">
+          <span className="status-dot status-dot-cyan" />
+          showing{" "}
+          <span className="text-fg-strong tabular-nums">{visible.length}</span>{" "}
+          / <span className="tabular-nums">{rows.length}</span> fetched
+          {isPending && (
+            <span className="text-accent-amber animate-pulse">· updating</span>
+          )}
         </span>
-        <span>
-          Sort: {sortKey} ({sortDir})
+        <span className="flex items-center gap-1.5">
+          <span className="text-fg-dim">sort</span>
+          <span className="text-accent-cyan">{sortKey}</span>
+          <span className="text-fg-dim">·</span>
+          <span>{sortDir}</span>
         </span>
       </div>
-      <div className="overflow-x-auto rounded-lg border bg-white">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
-            <tr>
-              <th className="px-3 py-2 w-10">#</th>
-              <th className="px-3 py-2">Repo</th>
+      <div className="panel overflow-x-auto">
+        <table className="min-w-full text-[12px]">
+          <thead className="text-fg-muted text-left uppercase tracking-[0.1em] text-[10px]">
+            <tr className="border-b border-line">
+              <th className="px-3 py-2.5 w-10">#</th>
+              <th className="px-3 py-2.5">Repo</th>
               <SortableTh
                 label="Stars"
                 k="stars"
@@ -161,8 +181,8 @@ export function RepoTable({
                   align="right"
                 />
               )}
-              <th className="px-3 py-2">Category</th>
-              <th className="px-3 py-2">Description</th>
+              <th className="px-3 py-2.5">Category</th>
+              <th className="px-3 py-2.5">Description</th>
               <SortableTh
                 label="Updated"
                 k="updated"
@@ -186,9 +206,9 @@ export function RepoTable({
               <tr>
                 <td
                   colSpan={showCreated ? 9 : 8}
-                  className="px-3 py-12 text-center text-slate-500"
+                  className="px-3 py-12 text-center text-fg-muted"
                 >
-                  No repos match the current filters.
+                  no repos match the current filters.
                   <button
                     type="button"
                     onClick={() =>
@@ -200,54 +220,65 @@ export function RepoTable({
                         dir: null,
                       })
                     }
-                    className="ml-2 text-blue-600 hover:underline"
+                    className="ml-2 text-accent-cyan hover:underline"
                   >
-                    Reset filters
+                    reset filters
                   </button>
                 </td>
               </tr>
             ) : (
               visible.map((repo, idx) => (
-                <tr key={repo.id} className="border-t hover:bg-slate-50">
-                  <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
+                <tr
+                  key={repo.id}
+                  className="border-t border-line-soft hover:bg-panel-hover transition-colors"
+                >
+                  <td className="px-3 py-2 text-fg-dim tabular-nums">
+                    {String(idx + 1).padStart(2, "0")}
+                  </td>
                   <td className="px-3 py-2 font-medium">
                     <Link
-                      className="text-blue-600 hover:underline"
+                      className="text-fg-strong hover:text-accent-cyan inline-flex items-baseline gap-1.5 group"
                       href={repo.html_url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
+                      <span className="text-fg-dim group-hover:text-accent-cyan text-[10px]">
+                        ↗
+                      </span>
                       {repo.full_name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right tabular-nums text-fg-strong">
                     {formatCompactInt(repo.stargazers_count)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right tabular-nums text-fg-primary">
                     {formatCompactInt(repo.forks_count)}
                   </td>
                   {showTrend ? (
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-700">
+                    <td className="px-3 py-2 text-right tabular-nums text-accent-cyan">
                       {(repo.trend_score ?? 0).toFixed(1)}
                     </td>
                   ) : (
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-700">
+                    <td className="px-3 py-2 text-right tabular-nums text-accent-cyan">
                       {repo.score.toFixed(2)}
                     </td>
                   )}
                   <td className="px-3 py-2">
-                    <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+                    <span className="inline-flex items-center gap-1.5 border border-line px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-fg-muted bg-panel-elev">
+                      <span
+                        className={`status-dot ${CATEGORY_DOT[repo.category]}`}
+                      />
                       {repo.category}
                     </span>
                   </td>
-                  <td className="px-3 py-2 max-w-md truncate text-slate-600">
+                  <td className="px-3 py-2 max-w-md truncate text-fg-muted">
                     {repo.description ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
+                  <td className="px-3 py-2 text-fg-muted whitespace-nowrap text-[11px]">
                     {timeAgo(repo.pushed_at)}
                   </td>
                   {showCreated ? (
-                    <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
+                    <td className="px-3 py-2 text-fg-muted whitespace-nowrap text-[11px]">
                       {timeAgo(repo.created_at)}
                     </td>
                   ) : null}
@@ -272,16 +303,24 @@ interface SortableThProps {
 
 function SortableTh({ label, k, active, dir, onClick, align = "left" }: SortableThProps) {
   const isActive = active === k;
-  const arrow = isActive ? (dir === "desc" ? "▾" : "▴") : "";
+  const arrow = isActive ? (dir === "desc" ? "▾" : "▴") : "·";
   return (
     <th
-      className={`px-3 py-2 cursor-pointer select-none hover:text-slate-900 ${
+      className={`px-3 py-2.5 cursor-pointer select-none transition-colors ${
         align === "right" ? "text-right" : ""
-      } ${isActive ? "text-slate-900 font-semibold" : ""}`}
+      } ${isActive ? "text-accent-cyan" : "hover:text-fg-strong"}`}
       onClick={() => onClick(k)}
     >
-      {label}
-      {arrow ? <span className="ml-1 text-slate-400">{arrow}</span> : null}
+      <span className="inline-flex items-baseline gap-1">
+        {label}
+        <span
+          className={`text-[10px] ${
+            isActive ? "text-accent-cyan" : "text-fg-dim"
+          }`}
+        >
+          {arrow}
+        </span>
+      </span>
     </th>
   );
 }
@@ -312,76 +351,94 @@ function FilterBar({
   onReset,
 }: FilterBarProps) {
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs font-medium text-slate-600 mr-2">Category:</label>
-        {ALL_CATEGORIES.map((cat) => {
-          const active = categories.includes(cat);
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => onToggleCategory(cat)}
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs ring-1 transition-colors ${
-                active
-                  ? "bg-blue-600 text-white ring-blue-600"
-                  : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-400"
-              }`}
-            >
-              {cat}
-            </button>
-          );
-        })}
+    <div className="panel">
+      <div className="panel-header">
+        <span className="flex items-center gap-2">
+          <span className="text-accent-cyan">▌</span>
+          <span>filter &amp; sort</span>
+        </span>
+        <span className="label-tag">interactive</span>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <label className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-600">Min stars:</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={100}
-            value={minStars || ""}
-            placeholder="0"
-            onChange={(e) => onMinStars(Number(e.target.value))}
-            className="w-24 rounded-md border border-slate-200 px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="flex items-center gap-2 flex-1 min-w-[180px]">
-          <span className="text-xs font-medium text-slate-600">Search:</span>
-          <input
-            type="search"
-            value={query}
-            placeholder="repo name or description"
-            onChange={(e) => onQuery(e.target.value)}
-            className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-600">Track:</span>
-          <select
-            value={limit}
-            onChange={(e) => onLimit(Number(e.target.value))}
-            className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+      <div className="px-4 py-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <label className="text-[10px] uppercase tracking-[0.12em] text-fg-muted mr-1">
+            category:
+          </label>
+          {ALL_CATEGORIES.map((cat) => {
+            const active = categories.includes(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => onToggleCategory(cat)}
+                className={`inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] transition-colors ${
+                  active
+                    ? "border-accent-cyan text-accent-cyan bg-accent-cyan/10"
+                    : "border-line text-fg-muted hover:text-fg-strong hover:border-line-strong"
+                }`}
+              >
+                <span className={`status-dot ${CATEGORY_DOT[cat]}`} />
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
+          <label className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
+              min stars:
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={100}
+              value={minStars || ""}
+              placeholder="0"
+              onChange={(e) => onMinStars(Number(e.target.value))}
+              className="w-24 bg-panel-elev border border-line px-2 py-1 text-fg-strong tabular-nums focus:border-accent-cyan focus:outline-none placeholder:text-fg-dim"
+            />
+          </label>
+          <label className="flex items-center gap-2 flex-1 min-w-[180px]">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
+              search:
+            </span>
+            <input
+              type="search"
+              value={query}
+              placeholder="repo name or description"
+              onChange={(e) => onQuery(e.target.value)}
+              className="flex-1 bg-panel-elev border border-line px-2 py-1 text-fg-strong focus:border-accent-cyan focus:outline-none placeholder:text-fg-dim"
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
+              track:
+            </span>
+            <select
+              value={limit}
+              onChange={(e) => onLimit(Number(e.target.value))}
+              className="bg-panel-elev border border-line px-2 py-1 text-fg-strong focus:border-accent-cyan focus:outline-none"
+            >
+              {LIMIT_PRESETS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                  {n === defaultLimit ? " (default)" : ""}
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] text-fg-dim uppercase tracking-[0.1em]">
+              max {GITHUB_SEARCH_MAX_RESULTS}
+            </span>
+          </label>
+          <button
+            type="button"
+            onClick={onReset}
+            className="ml-auto text-[10px] uppercase tracking-[0.12em] text-fg-muted hover:text-accent-red border border-line hover:border-accent-red px-2 py-1 transition-colors"
           >
-            {LIMIT_PRESETS.map((n) => (
-              <option key={n} value={n}>
-                {n}
-                {n === defaultLimit ? " (default)" : ""}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-slate-400">
-            (max {GITHUB_SEARCH_MAX_RESULTS})
-          </span>
-        </label>
-        <button
-          type="button"
-          onClick={onReset}
-          className="ml-auto text-xs text-slate-500 underline hover:text-slate-900"
-        >
-          Reset
-        </button>
+            reset
+          </button>
+        </div>
       </div>
     </div>
   );
