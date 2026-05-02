@@ -63,6 +63,7 @@ describe("classifyCategory", () => {
     // YOLO common variants beyond v5 / v8 must classify as Vision
     expect(classifyCategory({ topics: ["yolov3"], description: null })).toBe("Vision");
     expect(classifyCategory({ topics: ["yolov4"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov6"], description: null })).toBe("Vision");
     expect(classifyCategory({ topics: ["yolov7"], description: null })).toBe("Vision");
     expect(classifyCategory({ topics: ["yolov9"], description: null })).toBe("Vision");
     expect(classifyCategory({ topics: ["yolov10"], description: null })).toBe("Vision");

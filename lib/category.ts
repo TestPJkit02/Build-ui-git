@@ -52,11 +52,13 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "yolo",
       // Common YOLO version aliases. The leading-boundary rule used by
       // matchKeyword() rejects "yolov<N>" against the bare "yolo" keyword
-      // (the trailing "v" is a letter), so each shipped major version is
-      // listed explicitly. Add new ones here as they become common.
+      // (the trailing "v" is a letter), so every major shipped version we
+      // want to recognise must be listed explicitly. Keep this list in sync
+      // with releases that have meaningful GitHub-topic adoption.
       "yolov3",
       "yolov4",
       "yolov5",
+      "yolov6",
       "yolov7",
       "yolov8",
       "yolov9",
