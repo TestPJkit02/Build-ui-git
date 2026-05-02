@@ -28,6 +28,15 @@ Là một AI engineer / product researcher, tôi cần một dashboard duy nhấ
 - Data source: GitHub Search API `/search/repositories` (public, không cần auth
   cho rate-limit nhỏ; có support `GITHUB_TOKEN` env nếu cần).
 
+### F1b. Trang `/new` — Newly published trending repos
+- Hiển thị các repo AI **mới được tạo gần đây** trên GitHub (default window 60 ngày)
+  có lượng tương tác cao (stars / discussion / activity).
+- Cùng cấu trúc bảng với `/`, thêm cột **`Created`** (thời gian tạo) ngoài `Updated`.
+- Sort mặc định: **trend score** = `stars / max(1, days_since_creation)` —
+  ưu tiên repo trẻ + tăng trưởng nhanh.
+- Data source: cùng GitHub Search API, đổi `pushed:>=DATE` → `created:>=DATE`.
+- Default fetch limit 30 (configurable, xem F7).
+
 ### F2. Trang `/news` — AI news feed
 - Hiển thị 30 AI story mới nhất (title, source, points, comments, time, link).
 - Source: Hacker News Algolia API (`hn.algolia.com/api/v1/search_by_date`)
@@ -40,7 +49,7 @@ Là một AI engineer / product researcher, tôi cần một dashboard duy nhấ
 - Chart 1: phân bố sao theo category (bar).
 - Chart 2: cumulative stars theo thời gian update (area, mock data từ list hiện tại).
 
-### F4. Ranking algorithm
+### F4. Ranking algorithm — composite score (trang `/`)
 - Input: `{ stars, forks, pushed_at, created_at }`.
 - Score = `log2(stars + 1) * 0.5 + log2(forks + 1) * 0.3 + recency_factor * 0.2`.
 - `recency_factor`: `1.0` nếu pushed trong 7 ngày, giảm tuyến tính về `0.0`
@@ -57,6 +66,32 @@ Là một AI engineer / product researcher, tôi cần một dashboard duy nhấ
 - Footer: link GitHub source + credit goodailist.com.
 - Responsive (mobile breakpoint: stack table thành cards).
 - Tailwind dark-mode-friendly (bonus).
+
+### F4b. Ranking algorithm — trend score (trang `/new`)
+- Input: `{ stars, created_at }` (+ optionally `pushed_at` cho tiebreaker).
+- `trend_score = stars / max(1, days_since_creation)` — stars per day kể từ khi
+  repo được publish.
+- Pure function, deterministic, unit-tested.
+
+### F7. Configurable repo limit (trang `/` và `/new`)
+- User chọn được số lượng repo theo dõi qua **input số** ở header trang.
+- URL search-param `?limit=N` persist lựa chọn (link / refresh / share).
+- Default 50, allowed values 50 / 100 / 200 / 500 / 1000.
+- Cap cứng ở 1000 (giới hạn của GitHub Search API total results).
+- `lib/github.ts.fetchAiRepos(limit)` paginate qua `per_page=100` cho `limit > 100`.
+
+### F8. Filter + sort cột bảng repo
+- Click cột header (`Stars` / `Forks` / `Score` / `Updated` / `Created`) để sort
+  asc/desc; click lần 2 đảo chiều.
+- Dropdown category multi-select để filter (LLM / Agents / RAG / Vision /
+  Audio / Image / Tooling / Other).
+- Min stars input (number) + free-text search (match `full_name` hoặc
+  `description`).
+- Filter / sort state persist qua URL search-params:
+  `?sort=score&dir=desc&category=LLM,Agents&minStars=1000&q=ollama`.
+- Pure helper functions `lib/sort.ts` + `lib/filter.ts` để testable 100% unit.
+- Client component `RepoTable.tsx` đọc / ghi search-params (Next.js
+  `useRouter` + `useSearchParams`).
 
 ## 3. Non-functional requirements
 
