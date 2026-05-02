@@ -40,6 +40,27 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
   },
 ];
 
+/**
+ * Match a keyword against a haystack with smarter rules:
+ *   - Short single-token keywords (≤ 5 chars, no whitespace/hyphen) require a
+ *     word-boundary match. This prevents the LLM keyword "gpt" from matching
+ *     inside the Agents topic "autogpt", or "rag" matching inside "fragment".
+ *   - Longer or multi-token keywords use plain substring match so we can
+ *     still catch phrases like "language-model" or "retrieval augmented".
+ */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchKeyword(haystack: string, keyword: string): boolean {
+  const needle = keyword.toLowerCase();
+  if (needle.length <= 5 && !/[\s-]/.test(needle)) {
+    const re = new RegExp(`\\b${escapeRegex(needle)}\\b`);
+    return re.test(haystack);
+  }
+  return haystack.includes(needle);
+}
+
 export function classifyCategory(input: Pick<Repo, "topics" | "description">): Category {
   const haystacks: string[] = [];
   for (const t of input.topics ?? []) haystacks.push(t.toLowerCase());
@@ -47,9 +68,8 @@ export function classifyCategory(input: Pick<Repo, "topics" | "description">): C
 
   for (const rule of RULES) {
     for (const kw of rule.keywords) {
-      const needle = kw.toLowerCase();
       for (const h of haystacks) {
-        if (h.includes(needle)) return rule.category;
+        if (matchKeyword(h, kw)) return rule.category;
       }
     }
   }
