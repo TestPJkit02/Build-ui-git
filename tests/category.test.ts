@@ -8,8 +8,29 @@ describe("classifyCategory", () => {
   });
 
   it("classifies Agents repos", () => {
-    expect(classifyCategory({ topics: ["agent", "autogpt"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["agent", "autogpt"], description: null })).toBe("Agents");
     expect(classifyCategory({ topics: ["multi-agent"], description: null })).toBe("Agents");
+    expect(classifyCategory({ topics: ["autogpt"], description: null })).toBe("Agents");
+    expect(classifyCategory({ topics: ["agentic"], description: null })).toBe("Agents");
+  });
+
+  it("does not let short LLM keyword 'gpt' substring-match Agents topics", () => {
+    // regression: "gpt" must not match inside "autogpt" / "chatgpt"-like agent topics
+    expect(classifyCategory({ topics: ["autogpt"], description: null })).toBe("Agents");
+    // ChatGPT-style topic still classified as LLM via the longer "chatgpt" keyword
+    expect(classifyCategory({ topics: ["chatgpt"], description: null })).toBe("LLM");
+    // Plain "gpt" / "gpt-4" topic still classified as LLM (whole-word match)
+    expect(classifyCategory({ topics: ["gpt"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["gpt-4"], description: null })).toBe("LLM");
+  });
+
+  it("does not let short RAG keyword 'rag' substring-match unrelated words", () => {
+    expect(
+      classifyCategory({ topics: [], description: "fragment shader benchmark" }),
+    ).toBe("Other");
+    expect(
+      classifyCategory({ topics: [], description: "RAG pipeline tutorial" }),
+    ).toBe("RAG");
   });
 
   it("classifies RAG by retrieval-augmented topic", () => {
