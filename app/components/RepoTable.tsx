@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { filterRepos, parseCategoryList, parseMinStars } from "@/lib/filter";
 import { formatCompactInt, timeAgo } from "@/lib/format";
-import { GITHUB_SEARCH_MAX_RESULTS, clampLimit } from "@/lib/github";
+import { GITHUB_SEARCH_MAX_RESULTS, LIMIT_PRESETS, clampLimit } from "@/lib/github";
 import { parseSortDir, parseSortKey, sortRepos } from "@/lib/sort";
 import type { Category, RankedRepo, SortDir, SortKey } from "@/lib/types";
 
@@ -19,8 +19,6 @@ const ALL_CATEGORIES: Category[] = [
   "Tooling",
   "Other",
 ];
-
-const LIMIT_PRESETS = [50, 100, 200, 500, 1000];
 
 interface RepoTableProps {
   rows: RankedRepo[];

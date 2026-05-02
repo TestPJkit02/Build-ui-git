@@ -7,7 +7,11 @@ import { RepoTable } from "../components/RepoTable";
 
 export const revalidate = 600;
 
-const DEFAULT_LIMIT = 30;
+// Must be one of LIMIT_PRESETS in app/components/RepoTable.tsx (50, 100, 200,
+// 500, 1000). Earlier value of 30 made the <select> visually default to "50"
+// (the first option) while the actual fetched limit was 30 — confusing
+// mismatch caught by Devin Review on PR #9. Aligning with SPEC F7 default.
+const DEFAULT_LIMIT = 50;
 const DAYS_WINDOW = 60;
 
 async function loadNewRepos(
