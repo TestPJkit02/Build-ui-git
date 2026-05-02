@@ -46,10 +46,13 @@ export function Header({ hasToken }: { hasToken: boolean }) {
 
         <nav className="order-3 lg:order-2 w-full lg:w-auto flex flex-wrap items-center gap-x-1 gap-y-2 text-xs uppercase tracking-[0.12em]">
           {NAV_ITEMS.map((item) => {
+            // Use exact match + segment-aware prefix so `/news` does NOT
+            // match `/new` (i.e. `"/news".startsWith("/new")` would be true).
             const active =
               item.href === "/"
                 ? pathname === "/"
-                : pathname?.startsWith(item.href);
+                : pathname === item.href ||
+                  pathname?.startsWith(item.href + "/") === true;
             return (
               <Link
                 key={item.href}
