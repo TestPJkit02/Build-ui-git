@@ -11,6 +11,19 @@ const NAV_ITEMS: { href: string; label: string; tag: string }[] = [
   { href: "/stats", label: "Stats", tag: "04" },
 ];
 
+// Render the live clock in Indochina Time (UTC+7, Asia/Ho_Chi_Minh).
+// `sv-SE` locale formats as `YYYY-MM-DD HH:mm:ss` natively.
+const CLOCK_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 export function Header({ hasToken }: { hasToken: boolean }) {
   const pathname = usePathname();
   const [now, setNow] = useState<Date | null>(null);
@@ -21,9 +34,7 @@ export function Header({ hasToken }: { hasToken: boolean }) {
     return () => clearInterval(id);
   }, []);
 
-  const stamp = now
-    ? `${now.toISOString().slice(0, 10)} ${now.toUTCString().slice(17, 25)} UTC`
-    : "—";
+  const stamp = now ? `${CLOCK_FORMATTER.format(now)} UTC+7` : "—";
 
   return (
     <header className="border-b border-line bg-panel/80 backdrop-blur sticky top-0 z-30">
