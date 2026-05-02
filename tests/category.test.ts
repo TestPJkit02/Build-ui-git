@@ -48,6 +48,36 @@ describe("classifyCategory", () => {
     expect(classifyCategory({ topics: ["yolov8"], description: null })).toBe("Vision");
     // "agents" plural topic
     expect(classifyCategory({ topics: ["agents"], description: null })).toBe("Agents");
+    // gpts / llms / transformers plural / family forms
+    expect(classifyCategory({ topics: ["gpts"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["llms"], description: null })).toBe("LLM");
+    expect(classifyCategory({ topics: ["transformers"], description: null })).toBe("LLM");
+  });
+
+  it("does not let short keywords letter-suffix-match unrelated words (PR #4 review)", () => {
+    // 'rag' (RAG) must not match 'rage' / 'rags' / 'ragtime'
+    expect(classifyCategory({ topics: [], description: "rage in the engine" })).toBe("Other");
+    expect(classifyCategory({ topics: ["ragtime"], description: null })).toBe("Other");
+    expect(classifyCategory({ topics: [], description: "the rags-to-riches saga" })).toBe("Other");
+    // 'voice' (Audio) must not match 'invoice'
+    expect(
+      classifyCategory({ topics: [], description: "invoice management system" }),
+    ).toBe("Other");
+    // 'agent' (Agents) must not match 'reagent'
+    expect(
+      classifyCategory({ topics: [], description: "reagent chemistry library" }),
+    ).toBe("Other");
+    // 'audio' (Audio) must not match 'claudio'
+    expect(classifyCategory({ topics: ["claudio"], description: null })).toBe("Other");
+    // 'llm' (LLM) must not match a fictional 'llmix' / 'llmate' word
+    expect(
+      classifyCategory({ topics: [], description: "an llmix benchmark suite" }),
+    ).toBe("Other");
+    // Sanity: real, valid uses of those same keywords still classify correctly
+    expect(classifyCategory({ topics: ["voice"], description: null })).toBe("Audio");
+    expect(classifyCategory({ topics: ["rag"], description: null })).toBe("RAG");
+    expect(classifyCategory({ topics: ["agent"], description: null })).toBe("Agents");
+    expect(classifyCategory({ topics: ["audio"], description: null })).toBe("Audio");
   });
 
   it("classifies RAG by retrieval-augmented topic", () => {

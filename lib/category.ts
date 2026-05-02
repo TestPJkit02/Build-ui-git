@@ -12,19 +12,49 @@ import type { Category, Repo } from "./types";
 const RULES: Array<{ category: Category; keywords: string[] }> = [
   {
     category: "LLM",
-    keywords: ["llm", "gpt", "language-model", "language model", "transformer", "chatgpt", "claude", "llama"],
+    keywords: [
+      "llm",
+      "llms",
+      "gpt",
+      "gpts",
+      "language-model",
+      "language model",
+      "transformer",
+      "transformers",
+      "chatgpt",
+      "claude",
+      "llama",
+      "codellama",
+    ],
   },
   {
     category: "Agents",
-    keywords: ["agent", "autonomous", "autogpt", "multi-agent", "agentic"],
+    keywords: ["agent", "agents", "autonomous", "autogpt", "multi-agent", "agentic"],
   },
   {
     category: "RAG",
-    keywords: ["rag", "retrieval-augmented", "retrieval augmented", "vector-database", "vector database", "embedding"],
+    keywords: [
+      "rag",
+      "retrieval-augmented",
+      "retrieval augmented",
+      "vector-database",
+      "vector database",
+      "embedding",
+      "embeddings",
+    ],
   },
   {
     category: "Vision",
-    keywords: ["computer-vision", "computer vision", "object-detection", "yolo", "segmentation", "ocr"],
+    keywords: [
+      "computer-vision",
+      "computer vision",
+      "object-detection",
+      "yolo",
+      "yolov5",
+      "yolov8",
+      "segmentation",
+      "ocr",
+    ],
   },
   {
     category: "Audio",
@@ -41,21 +71,34 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
 ];
 
 /**
- * Match a keyword against a haystack with smarter rules:
- *   - Very short ambiguous keywords (≤ 3 chars, no whitespace/hyphen) require
- *     the keyword to be at a *word start* (leading word-boundary `\bkw`). This
- *     stops "gpt" from matching inside "autogpt"/"chatgpt", "rag" inside
- *     "fragment", "llm" inside random words, etc. — but still allows compound
- *     topics where the keyword leads, like "gpt-4", "gpt4", "rag-pipeline",
- *     "llms", "asr-models".
- *   - Everything else (≥ 4 chars or multi-token) uses plain substring match so
- *     the classifier still catches "language-model", "retrieval augmented",
- *     "yolov5", "llama2", "codellama", "agents", etc.
+ * Match a keyword against a haystack with these rules:
  *
- * Why `\bkw` (leading) instead of `\bkw\b` (both sides): `\b` does not exist
- * between a letter and a digit (both are `\w`), so `\bgpt\b` would miss
- * "gpt4" / "gpt2", and `\byolo\b` would miss "yolov5" — those are extremely
- * common AI topics on GitHub.
+ *   - Multi-token keywords (containing whitespace or a hyphen, e.g.
+ *     `"language-model"`, `"retrieval augmented"`, `"vector-database"`) use a
+ *     plain substring match. Hyphens / spaces already act as natural word
+ *     separators inside topics and descriptions, so substring is safe.
+ *
+ *   - Single-token keywords (`"gpt"`, `"voice"`, `"llama"`, `"yolo"`, …) must
+ *     appear at a *word start* AND must NOT be immediately followed by another
+ *     letter. The regex is `\\bkw(?![a-z])`. This:
+ *       • blocks mid-word matches    — "gpt"  in "autogpt"  / "chatgpt"
+ *       • blocks letter-suffix words — "rag"  in "rage" / "rags" / "ragtime"
+ *                                       "voice" in "invoice"
+ *                                       "agent" in "reagent"
+ *                                       "audio" in "claudio"
+ *       • allows digit / hyphen / underscore suffixes — "gpt4", "gpt-4",
+ *         "llama2", "llama-2", "rag-pipeline".
+ *
+ * Why a *negative lookahead* `(?![a-z])` instead of a trailing `\\b`: in JS,
+ * `\\b` exists between a letter and a non-word char, but NOT between a letter
+ * and a digit (both are `\\w`). So `\\bgpt\\b` would miss "gpt4" / "gpt2", and
+ * `\\byolo\\b` would miss "yolov5" — extremely common AI topics on GitHub.
+ * `(?![a-z])` lets us reject letter suffixes only, while still permitting
+ * digits and other non-letter characters.
+ *
+ * Compound forms whose keyword is *embedded* in another word (e.g. `codellama`
+ * = code + llama, `chatgpt` = chat + gpt) are not reachable by this rule —
+ * those are listed in `RULES` above as their own explicit aliases instead.
  */
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -63,11 +106,11 @@ function escapeRegex(s: string): string {
 
 function matchKeyword(haystack: string, keyword: string): boolean {
   const needle = keyword.toLowerCase();
-  if (needle.length <= 3 && !/[\s-]/.test(needle)) {
-    const re = new RegExp(`\\b${escapeRegex(needle)}`);
-    return re.test(haystack);
+  if (/[\s-]/.test(needle)) {
+    return haystack.includes(needle);
   }
-  return haystack.includes(needle);
+  const re = new RegExp(`\\b${escapeRegex(needle)}(?![a-z])`);
+  return re.test(haystack);
 }
 
 export function classifyCategory(input: Pick<Repo, "topics" | "description">): Category {
