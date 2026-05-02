@@ -6,6 +6,13 @@ const SEARCH_URL = "https://api.github.com/search/repositories";
 export const GITHUB_SEARCH_MAX_RESULTS = 1000;
 /** Per-page max for GitHub Search API. */
 const PER_PAGE_MAX = 100;
+/**
+ * Allowed `?limit=` values exposed in the UI dropdown. Pages MUST pick a
+ * `DEFAULT_LIMIT` from this list — otherwise the `<select>` shows a
+ * mismatched value (visually defaults to first option while the server
+ * uses the page's `DEFAULT_LIMIT`).
+ */
+export const LIMIT_PRESETS: readonly number[] = [50, 100, 200, 500, 1000];
 const KEYWORDS = ["ai", "llm", "agents", "rag", "machine-learning", "deep-learning"];
 
 /**

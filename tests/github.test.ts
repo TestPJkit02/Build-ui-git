@@ -6,6 +6,7 @@ import {
   fetchAiRepos,
   fetchNewlyCreatedRepos,
   GITHUB_SEARCH_MAX_RESULTS,
+  LIMIT_PRESETS,
 } from "../lib/github";
 
 describe("buildAiQuery", () => {
@@ -43,6 +44,36 @@ describe("buildNewRepoQuery", () => {
   it("uses an ISO date for the created filter", () => {
     const q = buildNewRepoQuery(7);
     expect(q).toMatch(/created:>=\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe("LIMIT_PRESETS", () => {
+  it("contains exactly the SPEC F7 values, ascending", () => {
+    expect([...LIMIT_PRESETS]).toEqual([50, 100, 200, 500, 1000]);
+  });
+
+  it("max preset equals GITHUB_SEARCH_MAX_RESULTS", () => {
+    expect(Math.max(...LIMIT_PRESETS)).toBe(GITHUB_SEARCH_MAX_RESULTS);
+  });
+
+  it("guardrail: every page's DEFAULT_LIMIT must appear in LIMIT_PRESETS", async () => {
+    // Regression test for the Devin Review finding on PR #9: /new had
+    // DEFAULT_LIMIT=30 but LIMIT_PRESETS = [50,100,200,500,1000], causing
+    // the <select> to visually default to 50 while the server fetched 30.
+    // We grep the literal page source rather than importing the modules,
+    // because Next.js page modules carry server-only RSC semantics that
+    // can't be evaluated by vitest.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const root = path.resolve(__dirname, "..");
+    const files = ["app/page.tsx", "app/new/page.tsx", "app/stats/page.tsx"];
+    for (const f of files) {
+      const src = fs.readFileSync(path.join(root, f), "utf8");
+      const m = src.match(/DEFAULT_LIMIT\s*=\s*(\d+)/);
+      expect(m, `${f} missing DEFAULT_LIMIT`).not.toBeNull();
+      const n = Number(m![1]);
+      expect(LIMIT_PRESETS, `${f} DEFAULT_LIMIT=${n} not in LIMIT_PRESETS`).toContain(n);
+    }
   });
 });
 
