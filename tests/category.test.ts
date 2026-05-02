@@ -54,6 +54,24 @@ describe("classifyCategory", () => {
     expect(classifyCategory({ topics: ["transformers"], description: null })).toBe("LLM");
   });
 
+  it("classifies plural / family aliases consistently across categories (PR #5 review)", () => {
+    // Tooling plurals must classify as Tooling, not fall through to Other
+    expect(classifyCategory({ topics: ["frameworks"], description: null })).toBe("Tooling");
+    expect(classifyCategory({ topics: ["toolkits"], description: null })).toBe("Tooling");
+    expect(classifyCategory({ topics: ["sdks"], description: null })).toBe("Tooling");
+    expect(classifyCategory({ topics: ["platforms"], description: null })).toBe("Tooling");
+    // YOLO common variants beyond v5 / v8 must classify as Vision
+    expect(classifyCategory({ topics: ["yolov3"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov4"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov7"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov9"], description: null })).toBe("Vision");
+    expect(classifyCategory({ topics: ["yolov10"], description: null })).toBe("Vision");
+    // Audio plural
+    expect(classifyCategory({ topics: ["voices"], description: null })).toBe("Audio");
+    // Image plural
+    expect(classifyCategory({ topics: ["diffusions"], description: null })).toBe("Image");
+  });
+
   it("does not let short keywords letter-suffix-match unrelated words (PR #4 review)", () => {
     // 'rag' (RAG) must not match 'rage' / 'rags' / 'ragtime'
     expect(classifyCategory({ topics: [], description: "rage in the engine" })).toBe("Other");

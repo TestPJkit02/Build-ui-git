@@ -50,23 +50,53 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "computer vision",
       "object-detection",
       "yolo",
+      // Common YOLO version aliases. The leading-boundary rule used by
+      // matchKeyword() rejects "yolov<N>" against the bare "yolo" keyword
+      // (the trailing "v" is a letter), so each shipped major version is
+      // listed explicitly. Add new ones here as they become common.
+      "yolov3",
+      "yolov4",
       "yolov5",
+      "yolov7",
       "yolov8",
+      "yolov9",
+      "yolov10",
       "segmentation",
       "ocr",
     ],
   },
   {
     category: "Audio",
-    keywords: ["speech", "audio", "tts", "asr", "whisper", "voice"],
+    keywords: ["speech", "audio", "tts", "asr", "whisper", "voice", "voices"],
   },
   {
     category: "Image",
-    keywords: ["image-generation", "diffusion", "stable-diffusion", "txt2img", "text-to-image", "image generation"],
+    keywords: [
+      "image-generation",
+      "diffusion",
+      "diffusions",
+      "stable-diffusion",
+      "txt2img",
+      "text-to-image",
+      "image generation",
+    ],
   },
   {
     category: "Tooling",
-    keywords: ["framework", "toolkit", "sdk", "platform", "infrastructure", "mlops", "fine-tuning", "fine tuning"],
+    keywords: [
+      "framework",
+      "frameworks",
+      "toolkit",
+      "toolkits",
+      "sdk",
+      "sdks",
+      "platform",
+      "platforms",
+      "infrastructure",
+      "mlops",
+      "fine-tuning",
+      "fine tuning",
+    ],
   },
 ];
 
