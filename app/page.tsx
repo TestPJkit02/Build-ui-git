@@ -2,8 +2,10 @@ import { fetchAiRepos, clampLimit } from "@/lib/github";
 import { rankRepos } from "@/lib/rank";
 import { classifyCategory } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
+import { formatCompactInt } from "@/lib/format";
 import type { RankedRepo } from "@/lib/types";
 import { RepoTable } from "./components/RepoTable";
+import { PageHeader, MetricChips, DegradedBanner } from "./components/PagePrimitives";
 
 export const revalidate = 600;
 
@@ -43,25 +45,37 @@ export default async function ReposPage({ searchParams }: PageProps) {
   const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
 
   const { rows, degraded, error } = await loadRepos(limit);
+  const totalStars = rows.reduce((acc, r) => acc + r.stargazers_count, 0);
+  const medianScore = (() => {
+    if (rows.length === 0) return 0;
+    const arr = [...rows].map((r) => r.score).sort((a, b) => a - b);
+    return arr[Math.floor(arr.length / 2)];
+  })();
+
   return (
-    <section className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold">Trending AI repositories</h1>
-      <p className="mt-2 text-slate-600">
-        Top {rows.length} repos with AI / LLM / Agents topics, pushed in the last 30 days.
-        Ranked by composite score (stars, forks, recency).
-      </p>
+    <section className="space-y-6">
+      <PageHeader
+        eyebrow="Module 01 · Trending"
+        title="Trending AI Repositories"
+        subtitle={`Top ${rows.length} repos with AI / LLM / Agents topics, pushed in the last 30 days. Ranked by composite score (stars · forks · recency).`}
+        statusLabel={degraded ? "DEGRADED" : "LIVE"}
+        statusTone={degraded ? "red" : "cyan"}
+      />
+      <MetricChips
+        items={[
+          { label: "tracked", value: String(rows.length) },
+          { label: "window", value: "30d push" },
+          { label: "total stars", value: formatCompactInt(totalStars) },
+          { label: "median score", value: medianScore.toFixed(2) },
+        ]}
+      />
       {degraded && (
-        <div
-          role="alert"
-          className="mt-4 border border-amber-200 bg-amber-50 text-amber-900 text-sm rounded-md px-4 py-3"
-        >
-          GitHub API unavailable — showing curated fallback list.
-          {error && <span className="block text-amber-700 mt-1">({error})</span>}
-        </div>
+        <DegradedBanner
+          headline="github search api unavailable — showing curated fallback list"
+          error={error}
+        />
       )}
-      <div className="mt-6">
-        <RepoTable rows={rows} defaultSort="score" defaultLimit={DEFAULT_LIMIT} />
-      </div>
+      <RepoTable rows={rows} defaultSort="score" defaultLimit={DEFAULT_LIMIT} />
     </section>
   );
 }

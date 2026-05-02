@@ -4,6 +4,7 @@ import { classifyCategory, ALL_CATEGORIES } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
 import { formatCompactInt } from "@/lib/format";
 import StatsCharts from "./StatsCharts";
+import { PageHeader, DegradedBanner } from "../components/PagePrimitives";
 import type { RankedRepo, Category } from "@/lib/types";
 
 export const revalidate = 600;
@@ -77,35 +78,74 @@ export default async function StatsPage({ searchParams }: PageProps) {
     return Number.isFinite(t) && Date.now() - t < 24 * 3600 * 1000;
   }).length;
   return (
-    <section className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold">Stats</h1>
-      <p className="mt-2 text-slate-600">
-        Aggregated metrics across the {rows.length} tracked AI repos.
-      </p>
+    <section className="space-y-6">
+      <PageHeader
+        eyebrow="Module 04 · Signal Core"
+        title="Aggregate Stats"
+        subtitle={`Aggregated metrics across the ${rows.length} tracked AI repos. Updated every 10 minutes.`}
+        statusLabel={degraded ? "DEGRADED" : "LIVE"}
+        statusTone={degraded ? "red" : "cyan"}
+      />
       {degraded && (
-        <div
-          role="alert"
-          className="mt-4 border border-amber-200 bg-amber-50 text-amber-900 text-sm rounded-md px-4 py-3"
-        >
-          GitHub API unavailable — stats based on fallback list.
-        </div>
+        <DegradedBanner headline="github search api unavailable — stats based on fallback list" />
       )}
-      <ul className="mt-6 grid gap-4 sm:grid-cols-4">
-        <KpiCard label="Repos tracked" value={String(rows.length)} />
-        <KpiCard label="Total stars" value={formatCompactInt(agg.totalStars)} />
-        <KpiCard label="Total forks" value={formatCompactInt(agg.totalForks)} />
-        <KpiCard label="Updated < 24h" value={String(updated24h)} />
+      <ul className="grid gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="repos tracked"
+          value={String(rows.length)}
+          tone="cyan"
+        />
+        <KpiCard
+          label="total stars"
+          value={formatCompactInt(agg.totalStars)}
+          tone="amber"
+        />
+        <KpiCard
+          label="total forks"
+          value={formatCompactInt(agg.totalForks)}
+          tone="green"
+        />
+        <KpiCard
+          label="updated < 24h"
+          value={String(updated24h)}
+          tone="magenta"
+        />
       </ul>
       <StatsCharts categoryRows={agg.categoryRows} cumulative={agg.cumulative} />
     </section>
   );
 }
 
-function KpiCard({ label, value }: { label: string; value: string }) {
+const TONE_DOT: Record<string, string> = {
+  cyan: "status-dot-cyan",
+  amber: "status-dot-amber",
+  green: "status-dot-green",
+  magenta: "status-dot-magenta",
+};
+
+function KpiCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "cyan" | "amber" | "green" | "magenta";
+}) {
   return (
-    <li className="rounded-lg border bg-white p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
+    <li className="panel">
+      <div className="panel-header">
+        <span className="flex items-center gap-2">
+          <span className={`status-dot ${TONE_DOT[tone]}`} />
+          {label}
+        </span>
+        <span className="label-tag">metric</span>
+      </div>
+      <div className="px-4 py-4">
+        <p className="text-fg-strong text-2xl sm:text-3xl font-semibold tabular-nums tracking-tight">
+          {value}
+        </p>
+      </div>
     </li>
   );
 }

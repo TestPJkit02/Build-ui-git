@@ -2,6 +2,7 @@ import { fetchAiNews } from "@/lib/hn";
 import { formatCompactInt, timeAgo } from "@/lib/format";
 import { FALLBACK_NEWS } from "@/lib/fallback";
 import type { NewsStory } from "@/lib/types";
+import { PageHeader, MetricChips, DegradedBanner } from "../components/PagePrimitives";
 
 export const revalidate = 600;
 
@@ -23,51 +24,95 @@ async function loadNews(): Promise<{ rows: NewsStory[]; degraded: boolean; error
 
 export default async function NewsPage() {
   const { rows, degraded, error } = await loadNews();
+  const totalPoints = rows.reduce((acc, r) => acc + r.points, 0);
+  const totalComments = rows.reduce((acc, r) => acc + r.num_comments, 0);
   return (
-    <section className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold">AI news feed</h1>
-      <p className="mt-2 text-slate-600">
-        Latest {rows.length} AI / LLM stories from Hacker News, filtered by keyword.
-      </p>
+    <section className="space-y-6">
+      <PageHeader
+        eyebrow="Module 03 · OSINT Stream"
+        title="AI News Feed"
+        subtitle={`Latest ${rows.length} AI / LLM stories from Hacker News, filtered by keyword. Sorted by recency.`}
+        statusLabel={degraded ? "DEGRADED" : "LIVE"}
+        statusTone={degraded ? "red" : "cyan"}
+      />
+      <MetricChips
+        items={[
+          { label: "stories", value: String(rows.length) },
+          { label: "source", value: "hn algolia" },
+          { label: "total points", value: formatCompactInt(totalPoints) },
+          { label: "total comments", value: formatCompactInt(totalComments) },
+        ]}
+      />
       {degraded && (
-        <div
-          role="alert"
-          className="mt-4 border border-amber-200 bg-amber-50 text-amber-900 text-sm rounded-md px-4 py-3"
-        >
-          Hacker News API unavailable — showing curated fallback list.
-          {error && <span className="block text-amber-700 mt-1">({error})</span>}
-        </div>
+        <DegradedBanner
+          headline="hacker news api unavailable — showing curated fallback list"
+          error={error}
+        />
       )}
-      <ul className="mt-6 space-y-3">
-        {rows.map((story) => (
-          <li key={story.id} className="rounded-lg border bg-white px-4 py-3 hover:bg-slate-50">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <a
-                href={story.url ?? `https://news.ycombinator.com/item?id=${story.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-base font-medium text-slate-900 hover:underline"
-              >
-                {story.title}
-              </a>
-              <span className="text-xs text-slate-500">{timeAgo(story.created_at)}</span>
-            </div>
-            <div className="mt-1 text-xs text-slate-500 flex flex-wrap gap-x-4">
-              <span>▲ {formatCompactInt(story.points)} points</span>
-              <span>💬 {formatCompactInt(story.num_comments)} comments</span>
-              <a
-                href={`https://news.ycombinator.com/item?id=${story.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                discuss
-              </a>
-              <span>by {story.author}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="panel">
+        <div className="panel-header">
+          <span className="flex items-center gap-2">
+            <span className="text-accent-cyan">▌</span>
+            <span>signal stream</span>
+          </span>
+          <span className="label-tag">{rows.length} items</span>
+        </div>
+        <ul className="divide-y divide-line-soft">
+          {rows.map((story, idx) => (
+            <li
+              key={story.id}
+              className="px-4 py-3 hover:bg-panel-hover transition-colors"
+            >
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-fg-dim text-[10px] tabular-nums">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <a
+                  href={story.url ?? `https://news.ycombinator.com/item?id=${story.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[13px] text-fg-strong hover:text-accent-cyan inline-flex items-baseline gap-1.5 group"
+                >
+                  <span className="text-fg-dim group-hover:text-accent-cyan text-[10px]">
+                    ↗
+                  </span>
+                  {story.title}
+                </a>
+                <span className="text-[10px] uppercase tracking-[0.1em] text-fg-muted ml-auto">
+                  {timeAgo(story.created_at)}
+                </span>
+              </div>
+              <div className="mt-1.5 text-[10px] uppercase tracking-[0.1em] text-fg-muted flex flex-wrap items-center gap-x-3 gap-y-1 pl-7">
+                <span className="flex items-center gap-1.5">
+                  <span className="status-dot status-dot-cyan" />
+                  <span className="tabular-nums text-fg-primary">
+                    {formatCompactInt(story.points)}
+                  </span>
+                  <span>points</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="status-dot status-dot-magenta" />
+                  <span className="tabular-nums text-fg-primary">
+                    {formatCompactInt(story.num_comments)}
+                  </span>
+                  <span>comments</span>
+                </span>
+                <span className="text-fg-dim">·</span>
+                <a
+                  href={`https://news.ycombinator.com/item?id=${story.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-accent-cyan"
+                >
+                  discuss
+                </a>
+                <span className="text-fg-dim">·</span>
+                <span>by {story.author}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

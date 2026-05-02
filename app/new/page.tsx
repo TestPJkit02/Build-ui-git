@@ -2,8 +2,10 @@ import { clampLimit, fetchNewlyCreatedRepos } from "@/lib/github";
 import { rankRepoTrend } from "@/lib/rank";
 import { classifyCategory } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
+import { formatCompactInt } from "@/lib/format";
 import type { RankedRepo } from "@/lib/types";
 import { RepoTable } from "../components/RepoTable";
+import { PageHeader, MetricChips, DegradedBanner } from "../components/PagePrimitives";
 
 export const revalidate = 600;
 
@@ -48,34 +50,45 @@ export default async function NewPage({ searchParams }: PageProps) {
   const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
 
   const { rows, degraded, error } = await loadNewRepos(limit);
+  const totalStars = rows.reduce((acc, r) => acc + r.stargazers_count, 0);
+  const topTrend = rows.reduce((acc, r) => Math.max(acc, r.trend_score ?? 0), 0);
+
   return (
-    <section className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold">Newly published AI repos</h1>
-      <p className="mt-2 text-slate-600">
-        Repos created in the last {DAYS_WINDOW} days, ranked by{" "}
-        <strong>trend score</strong> (stars per day since creation). Highlights
-        young projects gaining traction quickly.
-      </p>
+    <section className="space-y-6">
+      <PageHeader
+        eyebrow="Module 02 · Newly Published"
+        title="Newly Published AI Repos"
+        subtitle={
+          <>
+            Repos created in the last {DAYS_WINDOW} days, ranked by{" "}
+            <span className="text-accent-cyan">trend score</span> (stars per day
+            since creation). Highlights young projects gaining traction quickly.
+          </>
+        }
+        statusLabel={degraded ? "DEGRADED" : "LIVE"}
+        statusTone={degraded ? "red" : "cyan"}
+      />
+      <MetricChips
+        items={[
+          { label: "tracked", value: String(rows.length) },
+          { label: "window", value: `${DAYS_WINDOW}d created` },
+          { label: "total stars", value: formatCompactInt(totalStars) },
+          { label: "top trend", value: topTrend.toFixed(1) },
+        ]}
+      />
       {degraded && (
-        <div
-          role="alert"
-          className="mt-4 border border-amber-200 bg-amber-50 text-amber-900 text-sm rounded-md px-4 py-3"
-        >
-          GitHub API unavailable — showing curated fallback list (note: trend
-          score on fallback rows reflects the curated repos&apos; original
-          creation date, not real-time data).
-          {error && <span className="block text-amber-700 mt-1">({error})</span>}
-        </div>
-      )}
-      <div className="mt-6">
-        <RepoTable
-          rows={rows}
-          defaultSort="trend_score"
-          defaultLimit={DEFAULT_LIMIT}
-          showTrend
-          showCreated
+        <DegradedBanner
+          headline="github search api unavailable — fallback rows reflect curated repos' original creation date, not real-time trend"
+          error={error}
         />
-      </div>
+      )}
+      <RepoTable
+        rows={rows}
+        defaultSort="trend_score"
+        defaultLimit={DEFAULT_LIMIT}
+        showTrend
+        showCreated
+      />
     </section>
   );
 }
