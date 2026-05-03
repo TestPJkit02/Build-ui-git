@@ -354,12 +354,53 @@ describe("aggregateByContributor", () => {
     expect(rows[0].type).toBe("Bot");
     expect(rows[0].name).toBe("Dependabot");
     expect(rows[0].country).toBe("DE");
+    // Even with the profile found and `profile.login === 'dependabot'`, the
+    // rendered `row.login` must keep the original `[bot]` suffix.
+    expect(rows[0].login).toBe("dependabot[bot]");
   });
 
-  it("preserves the full `[bot]` suffix on the rendered login (bucket key keeps the suffix)", () => {
-    // We strip the suffix only to *look up* the profile; the bucket — and
-    // therefore the row.login surfaced in the UI — must keep the canonical
-    // `dependabot[bot]` form so the table reads correctly.
+  it("preserves the full `[bot]` suffix on the rendered login when the profile IS found", () => {
+    // Adversarial: this is the case Devin Review flagged on PR #19. The profile
+    // for `dependabot` exists (GitHub returns it as `login: 'dependabot'` after
+    // suffix stripping), but the contributor row's `login` was `dependabot[bot]`.
+    // The previous code `login: profile?.login ?? login` would silently drop the
+    // suffix when the profile was found, contradicting the explicit invariant.
+    const profiles = new Map<string, UserProfile>([
+      [
+        "dependabot",
+        {
+          login: "dependabot",
+          avatar_url: "https://github.com/apps/dependabot.png",
+          html_url: "https://github.com/apps/dependabot",
+          type: "Bot",
+          name: "Dependabot",
+          company: null,
+          location: "United States of America",
+          country: "US",
+          public_repos: 0,
+        },
+      ],
+    ]);
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "dependabot[bot]",
+          source_repo: "openai/whisper",
+          contributions: 50,
+        }),
+      ],
+      profiles,
+    );
+    expect(rows[0].login).toBe("dependabot[bot]");
+    // Profile-derived fields still reach the row.
+    expect(rows[0].country).toBe("US");
+    expect(rows[0].type).toBe("Bot");
+  });
+
+  it("preserves the full `[bot]` suffix on the rendered login when the profile is MISSING (fallback path)", () => {
+    // Most `[bot]` accounts (e.g. `github-actions`, `renovate`) 404 on the
+    // Users API even after stripping, so the profile is missing. The original
+    // login must still flow through to the rendered row.
     const rows = aggregateByContributor(
       [
         makeContributor({
