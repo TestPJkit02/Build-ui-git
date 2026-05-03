@@ -80,7 +80,7 @@ export default async function StatsPage({ searchParams }: PageProps) {
   return (
     <section className="space-y-6">
       <PageHeader
-        eyebrow="Module 04 · Signal Core"
+        eyebrow="Module 06 · Signal Core"
         title="Aggregate Stats"
         subtitle={`Aggregated metrics across the ${rows.length} tracked AI repos. Updated every 10 minutes.`}
         statusLabel={degraded ? "DEGRADED" : "LIVE"}

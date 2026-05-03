@@ -3,6 +3,7 @@ import { rankRepos } from "@/lib/rank";
 import { classifyCategory } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
 import { formatCompactInt } from "@/lib/format";
+import { fetchUserProfiles } from "@/lib/users";
 import type { RankedRepo } from "@/lib/types";
 import { RepoTable } from "./components/RepoTable";
 import { PageHeader, MetricChips, DegradedBanner } from "./components/PagePrimitives";
@@ -10,6 +11,30 @@ import { PageHeader, MetricChips, DegradedBanner } from "./components/PagePrimit
 export const revalidate = 600;
 
 const DEFAULT_LIMIT = 50;
+
+/**
+ * Build a map from `owner.login` (lowercased) to ISO-2 country code by
+ * fetching each unique owner's GitHub profile and parsing their `location`
+ * via `lib/nationality.ts`. Owners whose profile we couldn't fetch (or
+ * whose `location` doesn't map to a known country) are absent from the map
+ * — the table renders `—` for them.
+ *
+ * Failures here MUST NOT break the page: any thrown error in
+ * `fetchUserProfiles` returns an empty map, leaving every row with `—`.
+ */
+async function loadCountryMap(rows: RankedRepo[]): Promise<Map<string, string | null>> {
+  try {
+    const logins = rows.map((r) => r.owner.login);
+    const profiles = await fetchUserProfiles(logins);
+    const out = new Map<string, string | null>();
+    for (const p of profiles.values()) {
+      out.set(p.login.toLowerCase(), p.country);
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
 
 async function loadRepos(
   limit: number,
@@ -45,6 +70,7 @@ export default async function ReposPage({ searchParams }: PageProps) {
   const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
 
   const { rows, degraded, error } = await loadRepos(limit);
+  const countryByLogin = await loadCountryMap(rows);
   const totalStars = rows.reduce((acc, r) => acc + r.stargazers_count, 0);
   const medianScore = (() => {
     if (rows.length === 0) return 0;
@@ -75,7 +101,12 @@ export default async function ReposPage({ searchParams }: PageProps) {
           error={error}
         />
       )}
-      <RepoTable rows={rows} defaultSort="score" defaultLimit={DEFAULT_LIMIT} />
+      <RepoTable
+        rows={rows}
+        defaultSort="score"
+        defaultLimit={DEFAULT_LIMIT}
+        countryByLogin={countryByLogin}
+      />
     </section>
   );
 }

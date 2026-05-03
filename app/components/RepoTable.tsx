@@ -6,6 +6,7 @@ import { useMemo, useTransition } from "react";
 import { filterRepos, parseCategoryList, parseMinStars } from "@/lib/filter";
 import { formatCompactInt, timeAgo } from "@/lib/format";
 import { GITHUB_SEARCH_MAX_RESULTS, LIMIT_PRESETS, clampLimit } from "@/lib/github";
+import { countryFlag, countryName } from "@/lib/nationality";
 import { parseSortDir, parseSortKey, sortRepos } from "@/lib/sort";
 import type { Category, RankedRepo, SortDir, SortKey } from "@/lib/types";
 
@@ -42,6 +43,12 @@ interface RepoTableProps {
   showCreated?: boolean;
   /** The default limit applied when `?limit=` is missing. */
   defaultLimit: number;
+  /**
+   * Optional map from `owner.login` (lowercase) to ISO 3166-1 alpha-2 country
+   * code. When provided, the table renders an extra `Country` column showing
+   * the flag + code for each row's owner. Owners not in the map render `—`.
+   */
+  countryByLogin?: Map<string, string | null>;
 }
 
 /**
@@ -63,7 +70,9 @@ export function RepoTable({
   showTrend = false,
   showCreated = false,
   defaultLimit,
+  countryByLogin,
 }: RepoTableProps) {
+  const showCountry = countryByLogin !== undefined;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -145,6 +154,9 @@ export function RepoTable({
           <thead className="text-fg-muted text-left uppercase tracking-[0.1em] text-[10px]">
             <tr className="border-b border-line">
               <th className="px-3 py-2.5 w-10">#</th>
+              {showCountry ? (
+                <th className="px-3 py-2.5 w-16">Country</th>
+              ) : null}
               <th className="px-3 py-2.5">Repo</th>
               <SortableTh
                 label="Stars"
@@ -205,7 +217,9 @@ export function RepoTable({
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={showCreated ? 9 : 8}
+                  colSpan={
+                    8 + (showCreated ? 1 : 0) + (showCountry ? 1 : 0)
+                  }
                   className="px-3 py-12 text-center text-fg-muted"
                 >
                   no repos match the current filters.
@@ -235,6 +249,17 @@ export function RepoTable({
                   <td className="px-3 py-2 text-fg-dim tabular-nums">
                     {String(idx + 1).padStart(2, "0")}
                   </td>
+                  {showCountry ? (
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <CountryCell
+                        code={
+                          countryByLogin?.get(
+                            repo.owner.login.toLowerCase(),
+                          ) ?? null
+                        }
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-3 py-2 font-medium">
                     <Link
                       className="text-fg-strong hover:text-accent-cyan inline-flex items-baseline gap-1.5 group"
@@ -289,6 +314,25 @@ export function RepoTable({
         </table>
       </div>
     </div>
+  );
+}
+
+/**
+ * Render a country cell as `<flag emoji> <ISO-2>` (e.g. `🇻🇳 VN`), or `—` for
+ * unknown / null.
+ */
+function CountryCell({ code }: { code: string | null }) {
+  if (!code) {
+    return <span className="text-fg-dim">—</span>;
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[12px] tabular-nums text-fg-primary"
+      title={countryName(code)}
+    >
+      <span className="text-base leading-none">{countryFlag(code)}</span>
+      <span className="text-fg-muted text-[11px]">{code.toUpperCase()}</span>
+    </span>
   );
 }
 

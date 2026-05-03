@@ -80,6 +80,57 @@ Là một AI engineer / product researcher, tôi cần một dashboard duy nhấ
 - Cap cứng ở 1000 (giới hạn của GitHub Search API total results).
 - `lib/github.ts.fetchAiRepos(limit)` paginate qua `per_page=100` cho `limit > 100`.
 
+### F9. Trang `/devs` — Developer leaderboard
+
+- Tổng hợp các tài khoản GitHub là **owner của các repo AI đang trending** (lấy
+  từ cùng GitHub Search query với `/`, `limit=200`). Loại Organization vẫn được
+  tính như "developer" (định nghĩa rộng — bất kỳ owner non-bot nào của public
+  AI repo).
+- Cột bảng:
+  `#`, `Country` (cờ + ISO-2), `Login` (link profile), `Type`
+  (User / Org), `Repos` (số repo AI tracked thuộc owner này), `Stars`
+  (tổng sao), `Forks` (tổng fork), `Top Repo` (full_name có nhiều sao
+  nhất), `Score`.
+- `score = log2(total_stars + 1) * 0.6 + log2(total_forks + 1) * 0.3 +
+  log2(repos_count + 1) * 0.1` — ưu tiên sao nhưng có boost nhẹ cho người
+  duy trì nhiều repo.
+- Sort mặc định: `score` desc. Sortable: `score`, `stars`, `forks`,
+  `repos`.
+- URL search-param `?limit=200` (default 200, range 50–1000).
+
+### F10. Trang `/bots` — Bot leaderboard
+
+- Cùng pipeline với F9 nhưng filter chỉ giữ `type === "Bot"` HOẶC username
+  match heuristic (`[bot]` suffix, `-bot$`, exact list các bot phổ biến như
+  `dependabot`, `renovate-bot`, `github-actions[bot]`, `pre-commit-ci[bot]`,
+  `mergify[bot]`, `stale[bot]`).
+- Bot detection ưu tiên field GitHub Users API `type === "Bot"`. Heuristic
+  username là fallback khi user profile không fetch được hoặc API trả `User`
+  cho account thực ra là service account (e.g. `tensorflower-gardener`).
+- Cột bảng giống F9, đổi `Type` thành luôn hiển thị nhãn `Bot` đậm.
+
+### F11. Cột Country (quốc tịch) trên `/`, `/new`, `/devs`, `/bots`
+
+- Mỗi row hiển thị **cờ emoji + ISO-2 country code** của owner repo / dev /
+  bot, suy ra từ field `location` của GitHub User profile.
+- Heuristic mapping (`lib/nationality.ts`):
+  - Match exact country name (`vietnam`, `united states`, `germany`, ...)
+  - Match alias (`vn`, `usa`, `uk`, `us`, `u.s.`, ...)
+  - Match major city (`san francisco`, `new york`, `ho chi minh`, `berlin`,
+    `tokyo`, ...) → country
+  - Trả `null` nếu không nhận diện được → cell hiển thị `—`
+- Pure function, deterministic, ≥ 30 country mapping unit tests.
+- KHÔNG gọi 3rd-party API (restcountries, ipapi). Chỉ dùng GitHub Users API
+  với `GITHUB_TOKEN` đã có sẵn.
+
+### F12. GitHub Users API client (`lib/users.ts`)
+
+- `fetchUserProfile(login)` → `GET /users/:login`, return `UserProfile`.
+- `fetchUserProfiles(logins)` → batch fetch với concurrency 8.
+- Cached qua Next.js `fetch` với `revalidate: 600`.
+- Fallback `null` nếu profile fetch fail (404 hoặc rate-limit) — không break
+  page render.
+
 ### F8. Filter + sort cột bảng repo
 - Click cột header (`Stars` / `Forks` / `Score` / `Updated` / `Created`) để sort
   asc/desc; click lần 2 đảo chiều.

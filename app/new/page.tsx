@@ -3,9 +3,29 @@ import { rankRepoTrend } from "@/lib/rank";
 import { classifyCategory } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
 import { formatCompactInt } from "@/lib/format";
+import { fetchUserProfiles } from "@/lib/users";
 import type { RankedRepo } from "@/lib/types";
 import { RepoTable } from "../components/RepoTable";
 import { PageHeader, MetricChips, DegradedBanner } from "../components/PagePrimitives";
+
+/**
+ * Same shape as the helper in `app/page.tsx` — duplicated locally to keep
+ * each route self-contained. Building a country map from a list of repos:
+ * fetch each unique owner profile and parse their `location` to ISO-2.
+ */
+async function loadCountryMap(rows: RankedRepo[]): Promise<Map<string, string | null>> {
+  try {
+    const logins = rows.map((r) => r.owner.login);
+    const profiles = await fetchUserProfiles(logins);
+    const out = new Map<string, string | null>();
+    for (const p of profiles.values()) {
+      out.set(p.login.toLowerCase(), p.country);
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
 
 export const revalidate = 600;
 
@@ -50,6 +70,7 @@ export default async function NewPage({ searchParams }: PageProps) {
   const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
 
   const { rows, degraded, error } = await loadNewRepos(limit);
+  const countryByLogin = await loadCountryMap(rows);
   const totalStars = rows.reduce((acc, r) => acc + r.stargazers_count, 0);
   const topTrend = rows.reduce((acc, r) => Math.max(acc, r.trend_score ?? 0), 0);
 
@@ -88,6 +109,7 @@ export default async function NewPage({ searchParams }: PageProps) {
         defaultLimit={DEFAULT_LIMIT}
         showTrend
         showCreated
+        countryByLogin={countryByLogin}
       />
     </section>
   );

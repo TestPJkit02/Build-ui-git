@@ -8,7 +8,9 @@ const NAV_ITEMS: { href: string; label: string; tag: string }[] = [
   { href: "/", label: "Repos", tag: "01" },
   { href: "/new", label: "New", tag: "02" },
   { href: "/news", label: "News", tag: "03" },
-  { href: "/stats", label: "Stats", tag: "04" },
+  { href: "/devs", label: "Devs", tag: "04" },
+  { href: "/bots", label: "Bots", tag: "05" },
+  { href: "/stats", label: "Stats", tag: "06" },
 ];
 
 // Render the live clock in Indochina Time (UTC+7, Asia/Ho_Chi_Minh).
