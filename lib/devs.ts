@@ -1,6 +1,23 @@
 import { isBot } from "./bots";
 import type { Contributor } from "./contributors";
 import type { DevAggregation, DevSortKey, Repo, SortDir, UserProfile } from "./types";
+import { normalizeLogin } from "./users";
+
+/**
+ * Profile-lookup key for a contributor / owner login.
+ *
+ * `fetchUserProfiles` strips the `[bot]` suffix before calling the GitHub
+ * Users API (the bracketed form 404s) and stores the resulting profile under
+ * the API-returned login (e.g. `dependabot`, NOT `dependabot[bot]`). When a
+ * caller has a contributor login that still includes the `[bot]` suffix
+ * (e.g. from `/repos/:owner/:repo/contributors`), it must strip the suffix
+ * AND lowercase before querying `profilesByLowerLogin`. We don't change the
+ * bucket key — that stays `dependabot[bot]` so the rendered table preserves
+ * GitHub's canonical bot suffix.
+ */
+function profileLookupKey(login: string): string {
+  return normalizeLogin(login).toLowerCase();
+}
 
 /**
  * Aggregate a list of repos by owner login, joined with user profile data.
@@ -39,7 +56,7 @@ export function aggregateByOwner(
         existing.top_repo_stars = repo.stargazers_count;
       }
     } else {
-      const profile = profilesByLowerLogin.get(key);
+      const profile = profilesByLowerLogin.get(profileLookupKey(login));
       buckets.set(key, {
         login: profile?.login ?? login,
         avatar_url: profile?.avatar_url ?? repo.owner.avatar_url,
@@ -105,7 +122,7 @@ export function aggregateByContributor(
         existing.top_repo_stars = c.source_repo_stars;
       }
     } else {
-      const profile = profilesByLowerLogin.get(key);
+      const profile = profilesByLowerLogin.get(profileLookupKey(login));
       buckets.set(key, {
         login: profile?.login ?? login,
         avatar_url: profile?.avatar_url ?? c.avatar_url,
@@ -196,7 +213,7 @@ export function selectBots(
     profilesByLowerLogin.set(profile.login.toLowerCase(), profile);
   }
   return rows.filter((row) => {
-    const p = profilesByLowerLogin.get(row.login.toLowerCase());
+    const p = profilesByLowerLogin.get(profileLookupKey(row.login));
     return isBot(row.login, p);
   });
 }
@@ -211,7 +228,7 @@ export function selectDevs(
     profilesByLowerLogin.set(profile.login.toLowerCase(), profile);
   }
   return rows.filter((row) => {
-    const p = profilesByLowerLogin.get(row.login.toLowerCase());
+    const p = profilesByLowerLogin.get(profileLookupKey(row.login));
     return !isBot(row.login, p);
   });
 }
