@@ -1,75 +1,65 @@
 import "./globals.css";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { JetBrains_Mono } from "next/font/google";
+import { Header } from "./components/Header";
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "AI Repo Tracker — trending AI repos & news",
+  title: "AI REPO MONITOR — trending AI repos & news",
   description:
-    "Dashboard to track trending AI repos on GitHub and the latest AI news, ranked by stars, forks and recency.",
+    "Intelligence terminal tracking trending AI repos on GitHub and the latest AI news, ranked by stars, forks and recency.",
 };
 
-const NAV_ITEMS: { href: string; label: string }[] = [
-  { href: "/", label: "Repos" },
-  { href: "/news", label: "News" },
-  { href: "/stats", label: "Stats" },
-];
+const HAS_TOKEN = Boolean(process.env.GITHUB_TOKEN);
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-slate-50 text-slate-900 min-h-screen">
-        <header className="border-b bg-white">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="font-bold text-lg">
-              AI Repo Tracker
-            </Link>
-            <nav className="flex gap-6 text-sm">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-slate-600 hover:text-slate-900"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <a
-                href="https://github.com/TestPJkit02/Build-ui-git"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slate-600 hover:text-slate-900"
-              >
-                Source
-              </a>
-            </nav>
-          </div>
-        </header>
-        <main>{children}</main>
-        <footer className="border-t bg-white mt-16">
-          <div className="max-w-6xl mx-auto px-6 py-6 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
+    <html lang="en" className={jetbrainsMono.variable}>
+      <body className="font-mono min-h-screen text-fg-primary text-[13px] leading-relaxed">
+        <Header hasToken={HAS_TOKEN} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">{children}</main>
+        <footer className="border-t border-line mt-16 bg-panel/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-[10px] tracking-[0.12em] uppercase text-fg-muted flex flex-wrap items-center justify-between gap-2">
             <span>
-              Built with{" "}
-              <a
+              <span className="text-fg-dim">▌</span> built with{" "}
+              <Link
                 href="https://github.com/VibecodekitPJ8/vibecodekit-hybrid-ultra"
-                className="underline"
+                className="text-fg-primary hover:text-accent-cyan"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                VibecodeKit Hybrid Ultra
-              </a>
-              .
+                VibecodeKit Hybrid Ultra v0.22.0
+              </Link>
             </span>
             <span>
-              Inspired by{" "}
-              <a
-                href="https://goodailist.com/"
-                className="underline"
+              data:{" "}
+              <Link
+                href="https://docs.github.com/en/rest/search"
+                className="text-fg-primary hover:text-accent-cyan"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                goodailist.com
-              </a>
-              . Data: GitHub Search API + Hacker News.
+                github search api
+              </Link>{" "}
+              ·{" "}
+              <Link
+                href="https://hn.algolia.com/api"
+                className="text-fg-primary hover:text-accent-cyan"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                hacker news
+              </Link>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="status-dot status-dot-cyan pulse" />
+              terminal active
             </span>
           </div>
         </footer>

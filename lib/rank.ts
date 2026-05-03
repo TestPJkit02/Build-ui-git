@@ -51,3 +51,53 @@ export function rankRepos<T extends Repo>(repos: T[], now: Date = new Date()): (
       return a.full_name.localeCompare(b.full_name);
     });
 }
+
+/**
+ * Trend score for the `/new` tab.
+ *
+ * Pure formula: `stars / max(1, daysSinceCreation)` — i.e. average stars-per-day
+ * earned by the repo since its `created_at`. Boosts young repos that gained
+ * traction quickly relative to old repos that gained the same star count over
+ * years.
+ *
+ * Edge cases:
+ * - invalid / unparseable `created_at` → returns `0` (cannot compute).
+ * - repo created in the future (clock skew) → clamps daysSinceCreation to 1.
+ * - negative `stargazers_count` (defensive) → clamped to 0.
+ */
+export function trendScore(
+  repo: Pick<Repo, "stargazers_count" | "created_at">,
+  now: Date = new Date(),
+): number {
+  const t = Date.parse(repo.created_at);
+  if (Number.isNaN(t)) return 0;
+  const stars = Math.max(0, repo.stargazers_count);
+  const ageDays = Math.max(1, (now.getTime() - t) / MS_PER_DAY);
+  return stars / ageDays;
+}
+
+/**
+ * Sort copy of `repos` by trend score descending. Ties broken by stars then
+ * `created_at` (newer first) then `full_name` for determinism.
+ */
+export function rankRepoTrend<T extends Repo>(
+  repos: T[],
+  now: Date = new Date(),
+): (T & { score: number; trend_score: number })[] {
+  return repos
+    .map((r) => ({
+      ...r,
+      score: repoScore(r, now),
+      trend_score: trendScore(r, now),
+    }))
+    .sort((a, b) => {
+      if (b.trend_score !== a.trend_score) return b.trend_score - a.trend_score;
+      if (b.stargazers_count !== a.stargazers_count) {
+        return b.stargazers_count - a.stargazers_count;
+      }
+      const ta = Date.parse(a.created_at);
+      const tb = Date.parse(b.created_at);
+      if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return tb - ta;
+      return a.full_name.localeCompare(b.full_name);
+    });
+}

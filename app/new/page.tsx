@@ -1,26 +1,17 @@
-import { fetchAiRepos, clampLimit } from "@/lib/github";
-import { rankRepos } from "@/lib/rank";
+import { clampLimit, fetchNewlyCreatedRepos } from "@/lib/github";
+import { rankRepoTrend } from "@/lib/rank";
 import { classifyCategory } from "@/lib/category";
 import { FALLBACK_REPOS } from "@/lib/fallback";
 import { formatCompactInt } from "@/lib/format";
 import { fetchUserProfiles } from "@/lib/users";
 import type { RankedRepo } from "@/lib/types";
-import { RepoTable } from "./components/RepoTable";
-import { PageHeader, MetricChips, DegradedBanner } from "./components/PagePrimitives";
-
-export const revalidate = 600;
-
-const DEFAULT_LIMIT = 50;
+import { RepoTable } from "../components/RepoTable";
+import { PageHeader, MetricChips, DegradedBanner } from "../components/PagePrimitives";
 
 /**
- * Build a map from `owner.login` (lowercased) to ISO-2 country code by
- * fetching each unique owner's GitHub profile and parsing their `location`
- * via `lib/nationality.ts`. Owners whose profile we couldn't fetch (or
- * whose `location` doesn't map to a known country) are absent from the map
- * — the table renders `—` for them.
- *
- * Failures here MUST NOT break the page: any thrown error in
- * `fetchUserProfiles` returns an empty map, leaving every row with `—`.
+ * Same shape as the helper in `app/page.tsx` — duplicated locally to keep
+ * each route self-contained. Building a country map from a list of repos:
+ * fetch each unique owner profile and parse their `location` to ISO-2.
  */
 async function loadCountryMap(rows: RankedRepo[]): Promise<Map<string, string | null>> {
   try {
@@ -36,14 +27,23 @@ async function loadCountryMap(rows: RankedRepo[]): Promise<Map<string, string | 
   }
 }
 
-async function loadRepos(
+export const revalidate = 600;
+
+// Must be one of LIMIT_PRESETS in lib/github.ts (50, 100, 200, 500, 1000).
+// Earlier value of 30 made the <select> visually default to "50" (the
+// first option) while the actual fetched limit was 30 — confusing mismatch
+// caught by Devin Review on PR #9. Aligning with SPEC F7 default.
+const DEFAULT_LIMIT = 50;
+const DAYS_WINDOW = 60;
+
+async function loadNewRepos(
   limit: number,
 ): Promise<{ rows: RankedRepo[]; degraded: boolean; error?: string }> {
   let raw;
   let degraded = false;
   let error: string | undefined;
   try {
-    raw = await fetchAiRepos(limit);
+    raw = await fetchNewlyCreatedRepos(limit, DAYS_WINDOW);
     if (raw.length === 0) {
       raw = FALLBACK_REPOS;
       degraded = true;
@@ -53,7 +53,7 @@ async function loadRepos(
     degraded = true;
     error = e instanceof Error ? e.message : String(e);
   }
-  const ranked = rankRepos(raw).map((r) => ({
+  const ranked = rankRepoTrend(raw).map((r) => ({
     ...r,
     category: classifyCategory({ topics: r.topics, description: r.description }),
   }));
@@ -64,47 +64,51 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function ReposPage({ searchParams }: PageProps) {
+export default async function NewPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const limitParam = Array.isArray(params.limit) ? params.limit[0] : params.limit;
   const limit = clampLimit(Number(limitParam), DEFAULT_LIMIT);
 
-  const { rows, degraded, error } = await loadRepos(limit);
+  const { rows, degraded, error } = await loadNewRepos(limit);
   const countryByLogin = await loadCountryMap(rows);
   const totalStars = rows.reduce((acc, r) => acc + r.stargazers_count, 0);
-  const medianScore = (() => {
-    if (rows.length === 0) return 0;
-    const arr = [...rows].map((r) => r.score).sort((a, b) => a - b);
-    return arr[Math.floor(arr.length / 2)];
-  })();
+  const topTrend = rows.reduce((acc, r) => Math.max(acc, r.trend_score ?? 0), 0);
 
   return (
     <section className="space-y-6">
       <PageHeader
-        eyebrow="Module 01 · Trending"
-        title="Trending AI Repositories"
-        subtitle={`Top ${rows.length} repos with AI / LLM / Agents topics, pushed in the last 30 days. Ranked by composite score (stars · forks · recency).`}
+        eyebrow="Module 02 · Newly Published"
+        title="Newly Published AI Repos"
+        subtitle={
+          <>
+            Repos created in the last {DAYS_WINDOW} days, ranked by{" "}
+            <span className="text-accent-cyan">trend score</span> (stars per day
+            since creation). Highlights young projects gaining traction quickly.
+          </>
+        }
         statusLabel={degraded ? "DEGRADED" : "LIVE"}
         statusTone={degraded ? "red" : "cyan"}
       />
       <MetricChips
         items={[
           { label: "tracked", value: String(rows.length) },
-          { label: "window", value: "30d push" },
+          { label: "window", value: `${DAYS_WINDOW}d created` },
           { label: "total stars", value: formatCompactInt(totalStars) },
-          { label: "median score", value: medianScore.toFixed(2) },
+          { label: "top trend", value: topTrend.toFixed(1) },
         ]}
       />
       {degraded && (
         <DegradedBanner
-          headline="github search api unavailable — showing curated fallback list"
+          headline="github search api unavailable — fallback rows reflect curated repos' original creation date, not real-time trend"
           error={error}
         />
       )}
       <RepoTable
         rows={rows}
-        defaultSort="score"
+        defaultSort="trend_score"
         defaultLimit={DEFAULT_LIMIT}
+        showTrend
+        showCreated
         countryByLogin={countryByLogin}
       />
     </section>

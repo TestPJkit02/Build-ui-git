@@ -1,3 +1,228 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /*
+   * Base palette as space-separated RGB channels so Tailwind's opacity
+   * modifier syntax (e.g. `bg-panel/80`) can decompose them via
+   * `rgb(var(--bg-panel) / <alpha-value>)`.
+   */
+  --bg-canvas: 5 10 14;            /* #050a0e */
+  --bg-panel: 12 18 24;            /* #0c1218 */
+  --bg-panel-elev: 18 25 34;       /* #121922 */
+  --bg-panel-hover: 22 30 41;      /* #161e29 */
+  --border-line: 26 37 48;         /* #1a2530 */
+  --border-line-soft: 19 28 37;    /* #131c25 */
+  --border-line-strong: 35 49 64;  /* #233140 */
+
+  --accent-cyan: 54 230 216;       /* #36e6d8 */
+  --accent-cyan-dim: 26 138 130;   /* #1a8a82 */
+  --accent-cyan-soft: rgb(var(--accent-cyan) / 0.12);
+  --accent-red: 255 77 109;        /* #ff4d6d */
+  --accent-red-soft: rgb(var(--accent-red) / 0.12);
+  --accent-amber: 244 197 79;      /* #f4c54f */
+  --accent-amber-soft: rgb(var(--accent-amber) / 0.12);
+  --accent-green: 74 222 128;      /* #4ade80 */
+  --accent-green-soft: rgb(var(--accent-green) / 0.12);
+  --accent-magenta: 255 95 179;    /* #ff5fb3 */
+  --accent-blue: 96 165 250;       /* #60a5fa */
+
+  --text-primary: 207 216 220;     /* #cfd8dc */
+  --text-strong: 230 237 240;      /* #e6edf0 */
+  --text-muted: 107 125 140;       /* #6b7d8c */
+  --text-dim: 68 82 94;            /* #44525e */
+
+  --grid-rgb: 26, 37, 48;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-color: rgb(var(--bg-canvas));
+    color: rgb(var(--text-primary));
+    font-feature-settings: "tnum", "ss01";
+    background-image:
+      linear-gradient(
+        to right,
+        rgba(var(--grid-rgb), 0.18) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(var(--grid-rgb), 0.18) 1px,
+        transparent 1px
+      );
+    background-size: 64px 64px;
+    background-attachment: fixed;
+  }
+  ::selection {
+    background-color: var(--accent-cyan-soft);
+    color: rgb(var(--text-strong));
+  }
+  *:focus-visible {
+    outline: 2px solid rgb(var(--accent-cyan));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  .panel {
+    background-color: rgb(var(--bg-panel));
+    border: 1px solid rgb(var(--border-line));
+    border-radius: 4px;
+  }
+  .panel-elev {
+    background-color: rgb(var(--bg-panel-elev));
+    border: 1px solid rgb(var(--border-line));
+    border-radius: 4px;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid rgb(var(--border-line));
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    color: rgb(var(--text-muted));
+  }
+  .panel-header h2,
+  .panel-header h3 {
+    color: rgb(var(--text-strong));
+    font-weight: 600;
+    letter-spacing: 0.12em;
+  }
+  .label-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0.45rem;
+    border: 1px solid rgb(var(--border-line-strong));
+    border-radius: 2px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgb(var(--text-muted));
+    background-color: rgba(0, 0, 0, 0.25);
+    line-height: 1.4;
+  }
+  .label-tag-cyan {
+    color: rgb(var(--accent-cyan));
+    border-color: rgb(var(--accent-cyan) / 0.4);
+    background-color: var(--accent-cyan-soft);
+  }
+  .label-tag-red {
+    color: rgb(var(--accent-red));
+    border-color: rgb(var(--accent-red) / 0.4);
+    background-color: var(--accent-red-soft);
+  }
+  .label-tag-amber {
+    color: rgb(var(--accent-amber));
+    border-color: rgb(var(--accent-amber) / 0.4);
+    background-color: var(--accent-amber-soft);
+  }
+  .label-tag-green {
+    color: rgb(var(--accent-green));
+    border-color: rgb(var(--accent-green) / 0.4);
+    background-color: var(--accent-green-soft);
+  }
+  .status-dot {
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+  .status-dot-cyan {
+    background-color: rgb(var(--accent-cyan));
+    box-shadow: 0 0 6px rgb(var(--accent-cyan));
+  }
+  .status-dot-red {
+    background-color: rgb(var(--accent-red));
+    box-shadow: 0 0 6px rgb(var(--accent-red));
+  }
+  .status-dot-amber {
+    background-color: rgb(var(--accent-amber));
+    box-shadow: 0 0 6px rgb(var(--accent-amber));
+  }
+  .status-dot-green {
+    background-color: rgb(var(--accent-green));
+    box-shadow: 0 0 6px rgb(var(--accent-green));
+  }
+  .status-dot-magenta {
+    background-color: rgb(var(--accent-magenta));
+    box-shadow: 0 0 6px rgb(var(--accent-magenta));
+  }
+  .status-dot-dim {
+    background-color: rgb(var(--text-dim));
+  }
+  .pulse {
+    animation: termPulse 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse {
+      animation: none;
+    }
+  }
+  @keyframes termPulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  .terminal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid rgb(var(--border-line));
+    background-color: rgb(var(--bg-panel));
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(var(--text-muted));
+  }
+  .terminal-chip-strong {
+    color: rgb(var(--text-strong));
+  }
+  .scanline-overlay {
+    position: relative;
+  }
+  .scanline-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      rgba(255, 255, 255, 0.012) 3px,
+      transparent 4px
+    );
+  }
+}
+
+@layer utilities {
+  .font-mono-display {
+    font-feature-settings: "ss01", "ss02", "tnum", "cv01", "cv05";
+    letter-spacing: 0.01em;
+  }
+  .ascii-bracket::before {
+    content: "[ ";
+    color: rgb(var(--text-muted));
+  }
+  .ascii-bracket::after {
+    content: " ]";
+    color: rgb(var(--text-muted));
+  }
+}
