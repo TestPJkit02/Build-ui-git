@@ -58,7 +58,12 @@ export function aggregateByOwner(
     } else {
       const profile = profilesByLowerLogin.get(profileLookupKey(login));
       buckets.set(key, {
-        login: profile?.login ?? login,
+        // Always render the original owner login (preserves canonical bot
+        // suffix when present). The profile is used only for enrichment
+        // fields (avatar, type, name, country) — never to overwrite the
+        // login, since the GitHub Users API returns the suffix-stripped form
+        // (`dependabot` for `dependabot[bot]`).
+        login,
         avatar_url: profile?.avatar_url ?? repo.owner.avatar_url,
         html_url: profile?.html_url ?? `https://github.com/${login}`,
         type: profile?.type ?? "User",
@@ -124,7 +129,12 @@ export function aggregateByContributor(
     } else {
       const profile = profilesByLowerLogin.get(profileLookupKey(login));
       buckets.set(key, {
-        login: profile?.login ?? login,
+        // Always render the original contributor login (preserves canonical
+        // `[bot]` suffix). The profile is used only for enrichment fields —
+        // never to overwrite the login, since the GitHub Users API returns
+        // the suffix-stripped form (`dependabot` for `dependabot[bot]`),
+        // which would silently drop the suffix in the rendered table.
+        login,
         avatar_url: profile?.avatar_url ?? c.avatar_url,
         html_url: profile?.html_url ?? c.html_url,
         type: profile?.type ?? "User",
