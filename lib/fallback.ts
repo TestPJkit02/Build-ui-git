@@ -1,4 +1,4 @@
-import type { NewsStory, Repo } from "./types";
+import type { NewsStory, Repo, VnNewsItem } from "./types";
 
 /**
  * Static fallback data used when external APIs (GitHub / HN) fail or hit
@@ -142,5 +142,50 @@ export const FALLBACK_NEWS: NewsStory[] = [
     author: "fallback",
     created_at: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
     source: "hackernews",
+  },
+];
+
+/**
+ * Static fallback used when every VN source fetch fails (rate-limit,
+ * network outage). Mirrors the curated `FALLBACK_NEWS` shape but for
+ * `lang=vn`. Three items keeps the UI alive without pretending we have a
+ * full live feed.
+ */
+export const FALLBACK_VN_NEWS: VnNewsItem[] = [
+  {
+    id: "vn-fallback-1",
+    source_id: "vne-khcn",
+    source_name: "VnExpress · KHCN",
+    title: "OpenAI ra mắt mô hình AI mới với khả năng lập luận cải tiến",
+    url: "https://vnexpress.net/khoa-hoc-cong-nghe/ai",
+    pub_date: new Date(Date.now() - 3600 * 1000).toISOString(),
+    pub_date_ts: Date.now() - 3600 * 1000,
+    excerpt:
+      "Bản phân phối tĩnh khi không truy cập được nguồn live — VnExpress, Tuổi Trẻ, Genk và các nguồn khác sẽ trở lại khi API ổn định.",
+    ai_score: 3,
+  },
+  {
+    id: "vn-fallback-2",
+    source_id: "tuoitre-nss",
+    source_name: "Tuổi Trẻ · Nhịp sống số",
+    title: "Anthropic công bố nghiên cứu khả năng giải thích mô hình Claude",
+    url: "https://tuoitre.vn/nhip-song-so",
+    pub_date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    pub_date_ts: Date.now() - 2 * 3600 * 1000,
+    excerpt:
+      "Trí tuệ nhân tạo và học máy tiếp tục là chủ đề nóng — fallback tạm thời cho đến khi feed VN trả về dữ liệu.",
+    ai_score: 3,
+  },
+  {
+    id: "vn-fallback-3",
+    source_id: "genk-ai",
+    source_name: "Genk · AI",
+    title: "Công cụ AI nội địa Việt Nam thu hút đầu tư hàng triệu đô",
+    url: "https://genk.vn/ai.chn",
+    pub_date: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    pub_date_ts: Date.now() - 5 * 3600 * 1000,
+    excerpt:
+      "Mạng nơ-ron và mô hình ngôn ngữ tiếp tục là tâm điểm đầu tư của các quỹ trong nước.",
+    ai_score: 4,
   },
 ];
