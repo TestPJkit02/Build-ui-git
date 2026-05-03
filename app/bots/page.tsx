@@ -80,7 +80,7 @@ export default async function BotsPage({ searchParams }: PageProps) {
           </>
         }
         statusLabel={degraded ? "DEGRADED" : "LIVE"}
-        statusTone={degraded ? "red" : "amber"}
+        statusTone={degraded ? "red" : "cyan"}
       />
       <MetricChips
         items={[

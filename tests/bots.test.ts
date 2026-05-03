@@ -30,11 +30,9 @@ describe("isBotLogin", () => {
   });
 
   it("matches known service accounts", () => {
-    expect(isBotLogin("dependabot")).toBe(true);
-    expect(isBotLogin("github-actions")).toBe(true);
     expect(isBotLogin("tensorflower-gardener")).toBe(true);
-    expect(isBotLogin("renovatebot")).toBe(true);
-    expect(isBotLogin("vercel")).toBe(true);
+    expect(isBotLogin("actions-user")).toBe(true);
+    expect(isBotLogin("snyk-bot")).toBe(true);
   });
 
   it("does not match human-looking logins", () => {
@@ -43,6 +41,15 @@ describe("isBotLogin", () => {
     expect(isBotLogin("openai")).toBe(false);
     // -bot inside the login but not as suffix
     expect(isBotLogin("robot-warrior")).toBe(false);
+  });
+
+  it("does NOT treat live GitHub orgs as bots (avoid false positives)", () => {
+    // These are live Organizations on GitHub — their *bots* (vercel[bot],
+    // mergify[bot], dependabot[bot]) are caught by the [bot] suffix.
+    expect(isBotLogin("vercel")).toBe(false);
+    expect(isBotLogin("mergify")).toBe(false);
+    expect(isBotLogin("dependabot")).toBe(false);
+    expect(isBotLogin("github-actions")).toBe(false);
   });
 
   it("returns false for empty input", () => {
@@ -72,5 +79,16 @@ describe("isBot", () => {
   it("returns false for a normal User account that matches no heuristic", () => {
     const profile = makeProfile({ login: "ollama", type: "Organization" });
     expect(isBot("ollama", profile)).toBe(false);
+  });
+
+  it("never treats Organizations as bots even if heuristic would match", () => {
+    // The Organization-type guard supersedes the login heuristic, so an
+    // org login that *would* otherwise match the known-bot list (e.g. an
+    // org someone names "snyk-bot") is still not classified as a bot.
+    const orgProfile = makeProfile({ login: "snyk-bot", type: "Organization" });
+    expect(isBot("snyk-bot", orgProfile)).toBe(false);
+
+    const vercelOrg = makeProfile({ login: "vercel", type: "Organization" });
+    expect(isBot("vercel", vercelOrg)).toBe(false);
   });
 });
