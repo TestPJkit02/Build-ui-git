@@ -88,18 +88,28 @@ export interface DevAggregation {
   type: "User" | "Organization" | "Bot";
   name: string | null;
   country: string | null;
-  /** Number of tracked AI repos owned by this account. */
+  /**
+   * Number of tracked AI repos this account is associated with.
+   * For `/devs` (owner-aggregation): repos this account *owns*.
+   * For `/bots` (contributor-aggregation): repos this account contributed to.
+   */
   repos_count: number;
   /** Sum of stars across the tracked repos. */
   total_stars: number;
   /** Sum of forks across the tracked repos. */
   total_forks: number;
+  /**
+   * Sum of commits attributed to this login across the tracked repos.
+   * Only populated by `aggregateByContributor`; `aggregateByOwner` leaves
+   * it at `0` because GitHub does not expose owner-level commit counts.
+   */
+  total_contributions: number;
   /** Top repo (full_name) by stars among the tracked repos. */
   top_repo: string;
   top_repo_stars: number;
-  /** Composite score (see `rankDevs` in lib/devs.ts). */
+  /** Composite score (see `scoreDev` in lib/devs.ts). */
   score: number;
 }
 
 /** Sortable columns on the `/devs` and `/bots` tables. */
-export type DevSortKey = "score" | "stars" | "forks" | "repos";
+export type DevSortKey = "score" | "stars" | "forks" | "repos" | "contributions";

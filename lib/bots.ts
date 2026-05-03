@@ -50,15 +50,25 @@ export function isBotLogin(login: string): boolean {
 }
 
 /**
- * Decide whether an aggregated owner is a bot.
+ * Decide whether an aggregated owner / contributor is a bot.
  *
- * Combines the GitHub Users API `type` field (authoritative when available)
- * with a username heuristic for service accounts that GitHub still flags as
- * `User`. Organizations are never treated as bots — even if a name happens
- * to match the heuristic, an Organization profile takes precedence. If no
- * profile was fetched at all, fall back to the login heuristic.
+ * Resolution order (highest priority first):
+ *
+ *  1. Login ending in `[bot]` — GitHub's canonical App marker. This is
+ *     authoritative even if the profile we fetched (after stripping the
+ *     `[bot]` suffix to satisfy the Users API URL) reports
+ *     `type === "Organization"`, because the suffix-stripped login refers
+ *     to the *parent org* of the App (e.g. `vercel[bot]` strips to
+ *     `vercel`, which IS the Vercel Inc. Organization).
+ *  2. Profile `type === "Bot"` — authoritative when the GitHub Users API
+ *     flags the account explicitly.
+ *  3. Profile `type === "Organization"` — never a bot. This guards
+ *     against a heuristic match on an org slug (e.g. `snyk-bot` if
+ *     someone happened to name their org that for branding).
+ *  4. Fallback: the login heuristic (`-bot` suffix or known service-acct).
  */
 export function isBot(login: string, profile: UserProfile | undefined): boolean {
+  if (login.toLowerCase().endsWith("[bot]")) return true;
   if (profile?.type === "Bot") return true;
   if (profile?.type === "Organization") return false;
   return isBotLogin(login);

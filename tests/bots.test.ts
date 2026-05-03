@@ -91,4 +91,22 @@ describe("isBot", () => {
     const vercelOrg = makeProfile({ login: "vercel", type: "Organization" });
     expect(isBot("vercel", vercelOrg)).toBe(false);
   });
+
+  it("[bot] suffix is authoritative even when profile is the parent Organization", () => {
+    // A login like "vercel[bot]" is the bot, but the GitHub Users API does
+    // not accept the "[bot]" form — `fetchUserProfile` strips it and
+    // requests `/users/vercel`, which returns the Vercel Inc.
+    // Organization profile. Without the suffix-priority rule the
+    // Organization guard would falsely drop the bot. The suffix wins.
+    const parentOrg = makeProfile({ login: "vercel", type: "Organization" });
+    expect(isBot("vercel[bot]", parentOrg)).toBe(true);
+
+    const ghaOrg = makeProfile({ login: "github-actions", type: "Organization" });
+    expect(isBot("github-actions[bot]", ghaOrg)).toBe(true);
+  });
+
+  it("[bot] suffix wins even with no profile at all", () => {
+    expect(isBot("dependabot[bot]", undefined)).toBe(true);
+    expect(isBot("renovate[bot]", undefined)).toBe(true);
+  });
 });

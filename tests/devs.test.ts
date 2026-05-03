@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aggregateByContributor,
   aggregateByOwner,
   parseDevSortKey,
   scoreDev,
@@ -7,6 +8,7 @@ import {
   selectDevs,
   sortDevs,
 } from "../lib/devs";
+import type { Contributor } from "../lib/contributors";
 import type { Repo, UserProfile } from "../lib/types";
 
 function makeRepo(partial: {
@@ -161,6 +163,7 @@ describe("sortDevs", () => {
       type: "User" as const,
       name: null,
       country: null,
+      total_contributions: 0,
       top_repo: "",
       top_repo_stars: 0,
     }));
@@ -219,6 +222,7 @@ describe("selectDevs / selectBots", () => {
       repos_count: 1,
       total_stars: 0,
       total_forks: 0,
+      total_contributions: 0,
       top_repo: "",
       top_repo_stars: 0,
       score: 0,
@@ -246,6 +250,7 @@ describe("parseDevSortKey", () => {
     expect(parseDevSortKey("stars")).toBe("stars");
     expect(parseDevSortKey("forks")).toBe("forks");
     expect(parseDevSortKey("repos")).toBe("repos");
+    expect(parseDevSortKey("contributions")).toBe("contributions");
   });
 
   it("falls back to score for invalid / missing", () => {
@@ -257,5 +262,154 @@ describe("parseDevSortKey", () => {
   it("respects a custom fallback", () => {
     expect(parseDevSortKey(null, "stars")).toBe("stars");
     expect(parseDevSortKey("garbage", "repos")).toBe("repos");
+    expect(parseDevSortKey(null, "contributions")).toBe("contributions");
+  });
+});
+
+function makeContributor(
+  partial: Partial<Contributor> & { login: string; source_repo: string },
+): Contributor {
+  return {
+    login: partial.login,
+    avatar_url: partial.avatar_url ?? `https://avatars.githubusercontent.com/${partial.login}`,
+    html_url: partial.html_url ?? `https://github.com/${partial.login.replace(/\[bot\]$/, "")}`,
+    contributions: partial.contributions ?? 1,
+    source_repo: partial.source_repo,
+    source_repo_stars: partial.source_repo_stars ?? 0,
+    source_repo_forks: partial.source_repo_forks ?? 0,
+  };
+}
+
+describe("aggregateByContributor", () => {
+  it("buckets contributors by login (case-insensitive) and sums contributions/stars/forks", () => {
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "dependabot[bot]",
+          source_repo: "openai/whisper",
+          contributions: 50,
+          source_repo_stars: 70_000,
+          source_repo_forks: 8000,
+        }),
+        makeContributor({
+          login: "Dependabot[bot]",
+          source_repo: "openai/cookbook",
+          contributions: 30,
+          source_repo_stars: 60_000,
+          source_repo_forks: 9000,
+        }),
+        makeContributor({
+          login: "alice",
+          source_repo: "openai/whisper",
+          contributions: 200,
+          source_repo_stars: 70_000,
+          source_repo_forks: 8000,
+        }),
+      ],
+      new Map(),
+    );
+
+    expect(rows).toHaveLength(2);
+    const bot = rows.find((r) => r.login.toLowerCase() === "dependabot[bot]")!;
+    expect(bot.repos_count).toBe(2);
+    expect(bot.total_contributions).toBe(80);
+    expect(bot.total_stars).toBe(130_000);
+    expect(bot.total_forks).toBe(17_000);
+    expect(bot.top_repo).toBe("openai/whisper");
+    expect(bot.top_repo_stars).toBe(70_000);
+  });
+
+  it("populates type from the joined profile (e.g. type=Bot)", () => {
+    const profiles = new Map<string, UserProfile>([
+      [
+        "dependabot[bot]",
+        {
+          login: "dependabot[bot]",
+          avatar_url: "",
+          html_url: "https://github.com/apps/dependabot",
+          type: "Bot",
+          name: "Dependabot",
+          company: null,
+          location: null,
+          country: null,
+          public_repos: 0,
+        },
+      ],
+    ]);
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "dependabot[bot]",
+          source_repo: "openai/whisper",
+          contributions: 50,
+        }),
+      ],
+      profiles,
+    );
+    expect(rows[0].type).toBe("Bot");
+    expect(rows[0].name).toBe("Dependabot");
+  });
+
+  it("falls back to contributor metadata when profile is missing", () => {
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "github-actions[bot]",
+          source_repo: "x/y",
+          avatar_url: "https://example.com/gh-actions.png",
+          html_url: "https://github.com/apps/github-actions",
+        }),
+      ],
+      new Map(),
+    );
+    expect(rows[0].avatar_url).toBe("https://example.com/gh-actions.png");
+    expect(rows[0].html_url).toBe("https://github.com/apps/github-actions");
+    expect(rows[0].type).toBe("User");
+    expect(rows[0].country).toBeNull();
+  });
+
+  it("computes a score for each row", () => {
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "x",
+          source_repo: "a/b",
+          contributions: 10,
+          source_repo_stars: 1024,
+          source_repo_forks: 16,
+        }),
+      ],
+      new Map(),
+    );
+    expect(rows[0].score).toBeGreaterThan(0);
+  });
+
+  it("returns an empty list for empty input", () => {
+    expect(aggregateByContributor([], new Map())).toEqual([]);
+  });
+
+  it("tracks top_repo as the source_repo with the highest stars seen", () => {
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "alice",
+          source_repo: "x/small",
+          source_repo_stars: 100,
+        }),
+        makeContributor({
+          login: "alice",
+          source_repo: "x/big",
+          source_repo_stars: 50_000,
+        }),
+        makeContributor({
+          login: "alice",
+          source_repo: "x/medium",
+          source_repo_stars: 5_000,
+        }),
+      ],
+      new Map(),
+    );
+    expect(rows[0].top_repo).toBe("x/big");
+    expect(rows[0].top_repo_stars).toBe(50_000);
   });
 });

@@ -22,6 +22,12 @@ interface DevTableProps {
    * `"Bot"` on `/bots`. Bot table also forces every row to show "Bot".
    */
   typeMode: "mixed" | "bot";
+  /**
+   * When true, show a sortable `Commits` column populated from
+   * `total_contributions` (only meaningful for contributor-aggregated
+   * rows — used on `/bots`).
+   */
+  showContributions?: boolean;
 }
 
 /**
@@ -32,7 +38,13 @@ interface DevTableProps {
  * raw sort is sufficient. The `?limit=` param triggers a server refetch
  * because increasing it pulls more upstream repos.
  */
-export function DevTable({ rows, defaultSort, defaultLimit, typeMode }: DevTableProps) {
+export function DevTable({
+  rows,
+  defaultSort,
+  defaultLimit,
+  typeMode,
+  showContributions = false,
+}: DevTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -154,6 +166,16 @@ export function DevTable({ rows, defaultSort, defaultLimit, typeMode }: DevTable
                 onClick={onClickHeader}
                 align="right"
               />
+              {showContributions && (
+                <DevSortableTh
+                  label="Commits"
+                  k="contributions"
+                  active={sortKey}
+                  dir={sortDir}
+                  onClick={onClickHeader}
+                  align="right"
+                />
+              )}
               <th className="px-3 py-2.5">Top Repo</th>
               <DevSortableTh
                 label="Score"
@@ -168,7 +190,10 @@ export function DevTable({ rows, defaultSort, defaultLimit, typeMode }: DevTable
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-12 text-center text-fg-muted">
+                <td
+                  colSpan={showContributions ? 10 : 9}
+                  className="px-3 py-12 text-center text-fg-muted"
+                >
                   no accounts to display.
                 </td>
               </tr>
@@ -214,6 +239,11 @@ export function DevTable({ rows, defaultSort, defaultLimit, typeMode }: DevTable
                   <td className="px-3 py-2 text-right tabular-nums text-fg-primary">
                     {formatCompactInt(row.total_forks)}
                   </td>
+                  {showContributions && (
+                    <td className="px-3 py-2 text-right tabular-nums text-accent-amber">
+                      {formatCompactInt(row.total_contributions)}
+                    </td>
+                  )}
                   <td className="px-3 py-2 text-fg-muted whitespace-nowrap">
                     <Link
                       href={`https://github.com/${row.top_repo}`}
