@@ -319,19 +319,24 @@ describe("aggregateByContributor", () => {
     expect(bot.top_repo_stars).toBe(70_000);
   });
 
-  it("populates type from the joined profile (e.g. type=Bot)", () => {
+  it("populates type/name from the profile even when the profile is keyed by the suffix-stripped login (real GitHub Users API behavior)", () => {
+    // `fetchUserProfiles` strips the `[bot]` suffix before calling the GitHub
+    // Users API (the bracketed form 404s), and stores the resulting profile
+    // keyed by the API-returned login (e.g. `dependabot`, NOT `dependabot[bot]`).
+    // The contributor row, however, retains the full `dependabot[bot]` login.
+    // `aggregateByContributor` must reconcile these two forms.
     const profiles = new Map<string, UserProfile>([
       [
-        "dependabot[bot]",
+        "dependabot", // <-- API-returned login (stripped)
         {
-          login: "dependabot[bot]",
+          login: "dependabot",
           avatar_url: "",
           html_url: "https://github.com/apps/dependabot",
           type: "Bot",
           name: "Dependabot",
           company: null,
-          location: null,
-          country: null,
+          location: "Germany",
+          country: "DE",
           public_repos: 0,
         },
       ],
@@ -339,7 +344,7 @@ describe("aggregateByContributor", () => {
     const rows = aggregateByContributor(
       [
         makeContributor({
-          login: "dependabot[bot]",
+          login: "dependabot[bot]", // <-- contributor login (full, with suffix)
           source_repo: "openai/whisper",
           contributions: 50,
         }),
@@ -348,6 +353,24 @@ describe("aggregateByContributor", () => {
     );
     expect(rows[0].type).toBe("Bot");
     expect(rows[0].name).toBe("Dependabot");
+    expect(rows[0].country).toBe("DE");
+  });
+
+  it("preserves the full `[bot]` suffix on the rendered login (bucket key keeps the suffix)", () => {
+    // We strip the suffix only to *look up* the profile; the bucket — and
+    // therefore the row.login surfaced in the UI — must keep the canonical
+    // `dependabot[bot]` form so the table reads correctly.
+    const rows = aggregateByContributor(
+      [
+        makeContributor({
+          login: "dependabot[bot]",
+          source_repo: "openai/whisper",
+          contributions: 50,
+        }),
+      ],
+      new Map(),
+    );
+    expect(rows[0].login).toBe("dependabot[bot]");
   });
 
   it("falls back to contributor metadata when profile is missing", () => {

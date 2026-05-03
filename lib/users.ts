@@ -33,9 +33,13 @@ function buildHeaders(): Record<string, string> {
 
 /**
  * Strip GitHub's `[bot]` suffix from a login (e.g. `dependabot[bot]` →
- * `dependabot`). The Users API endpoint returns 404 for the bracketed form.
+ * `dependabot`). The Users API endpoint returns 404 for the bracketed form,
+ * and the GitHub-returned profile carries the *stripped* login. Callers that
+ * look up profiles using a contributor's original login (with the suffix
+ * still attached) must apply this same normalization to their key, otherwise
+ * the lookup silently misses.
  */
-function normalizeLogin(login: string): string {
+export function normalizeLogin(login: string): string {
   return login.replace(/\[bot\]$/i, "");
 }
 
