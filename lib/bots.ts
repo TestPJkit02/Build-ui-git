@@ -4,27 +4,29 @@ import type { UserProfile } from "./types";
  * Hard-coded list of well-known service / bot accounts that GitHub's Users
  * API may not flag as `type === "Bot"` (because they're regular User accounts
  * acting as automation hooks). Lowercased for case-insensitive matching.
+ *
+ * IMPORTANT: do NOT add login slugs that are also live GitHub Organizations
+ * (e.g. `vercel`, `mergify`, `codecov`, `dependabot-org`). Their automation
+ * counterparts already use the `[bot]` suffix (`vercel[bot]`,
+ * `mergify[bot]`, `dependabot[bot]`) which `isBotLogin()` catches via the
+ * `endsWith("[bot]")` check. Listing the org slug here would pull the org's
+ * own (human-owned) repos into `/bots`. The defensive guard in `isBot()`
+ * also returns `false` for any login whose profile reports
+ * `type === "Organization"`, but that only fires when we have a profile.
  */
 const KNOWN_BOT_LOGINS: ReadonlySet<string> = new Set([
-  "dependabot",
-  "renovate-bot",
-  "renovatebot",
-  "github-actions",
+  "tensorflower-gardener",
+  "torchbearer-ci-bot",
+  "googleapis-publisher",
+  "actions-user",
   "stale",
-  "mergify",
   "imgbot",
   "pre-commit-ci",
   "codecov-commenter",
-  "codecov-io",
-  "snyk-bot",
   "deepsource-autofix",
   "allcontributors",
   "release-please",
-  "actions-user",
-  "tensorflower-gardener", // TF's internal sync bot
-  "torchbearer-ci-bot",
-  "googleapis-publisher",
-  "vercel",
+  "snyk-bot",
 ]);
 
 /**
@@ -52,9 +54,12 @@ export function isBotLogin(login: string): boolean {
  *
  * Combines the GitHub Users API `type` field (authoritative when available)
  * with a username heuristic for service accounts that GitHub still flags as
- * `User`. If no profile was fetched at all, fall back to the heuristic.
+ * `User`. Organizations are never treated as bots — even if a name happens
+ * to match the heuristic, an Organization profile takes precedence. If no
+ * profile was fetched at all, fall back to the login heuristic.
  */
 export function isBot(login: string, profile: UserProfile | undefined): boolean {
   if (profile?.type === "Bot") return true;
+  if (profile?.type === "Organization") return false;
   return isBotLogin(login);
 }
