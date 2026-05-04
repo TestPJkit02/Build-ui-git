@@ -54,6 +54,37 @@ export interface NewsStory {
   source: "hackernews";
 }
 
+/** Language switch on the `/news` route. `en` = Hacker News, `vn` = aggregated VN feeds. */
+export type NewsLang = "en" | "vn";
+
+/**
+ * Source IDs for the VN-news aggregator. Keep stable — they are written
+ * to URL search-params (`/news?lang=vn&source=...`) and serialized into
+ * fallback fixtures.
+ */
+export type VnSourceId =
+  | "vne-khcn"
+  | "tuoitre-nss"
+  | "genk-ai"
+  | "tinhte"
+  | "viblo-ai"
+  | "viblo-dl"
+  | "viblo-ml"
+  | "znews-cn";
+
+export interface VnNewsItem {
+  id: string;             // stable hash of canonical URL
+  source_id: VnSourceId;
+  source_name: string;    // human label, e.g. "VnExpress · KHCN"
+  title: string;
+  url: string;            // canonical URL (utm-stripped, host-lowercased)
+  pub_date: string;       // ISO 8601, normalized
+  pub_date_ts: number;    // unix-ms
+  excerpt: string | null; // ≤200 char plain text from description
+  /** Number of AI-keyword hits in title + excerpt (0..N). Used by trending rank. */
+  ai_score: number;
+}
+
 /**
  * GitHub user profile fetched from `/users/:login`.
  *
