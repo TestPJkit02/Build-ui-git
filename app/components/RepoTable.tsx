@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { filterRepos, parseCategoryList, parseMinStars } from "@/lib/filter";
 import { formatCompactInt, timeAgo } from "@/lib/format";
 import { GITHUB_SEARCH_MAX_RESULTS, LIMIT_PRESETS, clampLimit } from "@/lib/github";
@@ -59,6 +59,11 @@ interface RepoTableProps {
  * `?category`, `?minStars`, `?q`, `?limit`. Server pages read the same
  * params for SSR. Filter / sort UI calls `router.replace(...)` to update
  * params without losing scroll position.
+ *
+ * The search input is the one exception: it owns its own local state and
+ * only commits to `?q=` on form submit (Enter key or the search button).
+ * This decouples per-keystroke typing from URL updates + filter re-runs,
+ * which used to cause noticeable input lag on large `?limit=` values.
  *
  * The `?limit=N` change triggers a full server round-trip (refetches more
  * repos from GitHub); the other params operate purely on the data already
@@ -394,6 +399,34 @@ function FilterBar({
   onLimit,
   onReset,
 }: FilterBarProps) {
+  // Local state for the search input. The committed `query` value lives in the
+  // URL and only updates when the user submits the form (button or Enter).
+  // Decoupling typing from URL updates avoids re-rendering hundreds of rows on
+  // every keystroke, which previously caused noticeable input lag.
+  const [searchInput, setSearchInput] = useState(query);
+
+  // Sync local state if the URL `q` is changed externally (e.g. reset button
+  // or browser navigation).
+  useEffect(() => {
+    setSearchInput(query);
+  }, [query]);
+
+  function commitSearch(value: string) {
+    onQuery(value);
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    commitSearch(searchInput);
+  }
+
+  function handleClear() {
+    setSearchInput("");
+    commitSearch("");
+  }
+
+  const hasPendingChange = searchInput.trim() !== query.trim();
+
   return (
     <div className="panel">
       <div className="panel-header">
@@ -443,18 +476,62 @@ function FilterBar({
               className="w-24 bg-panel-elev border border-line px-2 py-1 text-fg-strong tabular-nums focus:border-accent-cyan focus:outline-none placeholder:text-fg-dim"
             />
           </label>
-          <label className="flex items-center gap-2 flex-1 min-w-[180px]">
-            <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
-              search:
-            </span>
-            <input
-              type="search"
-              value={query}
-              placeholder="repo name or description"
-              onChange={(e) => onQuery(e.target.value)}
-              className="flex-1 bg-panel-elev border border-line px-2 py-1 text-fg-strong focus:border-accent-cyan focus:outline-none placeholder:text-fg-dim"
-            />
-          </label>
+          <form
+            onSubmit={handleSubmit}
+            role="search"
+            className="flex items-center gap-2 flex-1 min-w-[180px]"
+          >
+            <label className="flex items-center gap-2 flex-1">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
+                search:
+              </span>
+              <div className="relative flex flex-1 items-center border border-line bg-panel-elev focus-within:border-accent-cyan">
+                <input
+                  type="search"
+                  value={searchInput}
+                  placeholder="type then press Enter or click search"
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="flex-1 bg-transparent px-2 py-1 text-fg-strong focus:outline-none placeholder:text-fg-dim min-w-0"
+                />
+                {searchInput.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    aria-label="clear search"
+                    className="px-2 text-fg-muted hover:text-accent-red transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  aria-label="search"
+                  title={hasPendingChange ? "press Enter or click to search" : "search"}
+                  className={`flex items-center gap-1 border-l border-line px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors ${
+                    hasPendingChange
+                      ? "text-accent-cyan hover:bg-accent-cyan/10"
+                      : "text-fg-muted hover:text-accent-cyan hover:bg-accent-cyan/10"
+                  }`}
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 16"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="7" cy="7" r="4.5" />
+                    <line x1="10.5" y1="10.5" x2="14" y2="14" />
+                  </svg>
+                  <span>go</span>
+                </button>
+              </div>
+            </label>
+          </form>
           <label className="flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-[0.12em] text-fg-muted">
               track:
