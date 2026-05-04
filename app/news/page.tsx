@@ -26,11 +26,23 @@ function parseSourceFilter(raw: string | string[] | undefined): VnSourceId | nul
   return VALID_SOURCE_IDS.has(v as VnSourceId) ? (v as VnSourceId) : null;
 }
 
-async function loadEnglishNews(): Promise<{
+type EnglishLoad = {
   rows: NewsStory[];
   degraded: boolean;
   error?: string;
-}> {
+};
+
+type VietnameseLoad = {
+  items: VnNewsItem[];
+  trending: VnNewsItem[];
+  available: VnSourceId[];
+  failures: VnSourceId[];
+  errors: Partial<Record<VnSourceId, string>>;
+  degraded: boolean;
+  fatal?: string;
+};
+
+async function loadEnglishNews(): Promise<EnglishLoad> {
   try {
     const stories = await fetchAiNews(30);
     if (stories.length === 0) {
@@ -46,15 +58,7 @@ async function loadEnglishNews(): Promise<{
   }
 }
 
-async function loadVietnameseNews(sourceFilter: VnSourceId | null): Promise<{
-  items: VnNewsItem[];
-  trending: VnNewsItem[];
-  available: VnSourceId[];
-  failures: VnSourceId[];
-  errors: Partial<Record<VnSourceId, string>>;
-  degraded: boolean;
-  fatal?: string;
-}> {
+async function loadVietnameseNews(sourceFilter: VnSourceId | null): Promise<VietnameseLoad> {
   try {
     const bundle = await fetchVnNewsBundle({ trendingTake: 5 });
     if (bundle.items.length === 0) {
@@ -100,6 +104,10 @@ export default async function NewsPage({
   const lang = parseLang(params.lang);
   const sourceFilter = parseSourceFilter(params.source);
 
+  const enLoad = lang === "en" ? await loadEnglishNews() : null;
+  const vnLoad = lang === "vn" ? await loadVietnameseNews(sourceFilter) : null;
+  const degraded = (enLoad?.degraded ?? false) || (vnLoad?.degraded ?? false);
+
   return (
     <section className="space-y-6">
       <PageHeader
@@ -110,19 +118,23 @@ export default async function NewsPage({
             ? "Latest AI / LLM stories from Hacker News, filtered by keyword. Sorted by recency."
             : "Tin tức AI tiếng Việt — tổng hợp 8 nguồn lớn (VnExpress, Tuổi Trẻ, Genk, Tinh Tế, Viblo, ZNews). Sắp xếp theo thời gian."
         }
-        statusLabel="LIVE"
-        statusTone="cyan"
+        statusLabel={degraded ? "DEGRADED" : "LIVE"}
+        statusTone={degraded ? "red" : "cyan"}
       />
 
       <LangToggle current={lang} />
 
-      {lang === "en" ? <EnglishView /> : <VietnameseView sourceFilter={sourceFilter} />}
+      {lang === "en" && enLoad ? (
+        <EnglishView load={enLoad} />
+      ) : vnLoad ? (
+        <VietnameseView load={vnLoad} sourceFilter={sourceFilter} />
+      ) : null}
     </section>
   );
 }
 
-async function EnglishView() {
-  const { rows, degraded, error } = await loadEnglishNews();
+function EnglishView({ load }: { load: EnglishLoad }) {
+  const { rows, degraded, error } = load;
   const totalPoints = rows.reduce((acc, r) => acc + r.points, 0);
   const totalComments = rows.reduce((acc, r) => acc + r.num_comments, 0);
   return (
@@ -204,9 +216,14 @@ async function EnglishView() {
   );
 }
 
-async function VietnameseView({ sourceFilter }: { sourceFilter: VnSourceId | null }) {
-  const { items, trending, available, failures, errors, degraded, fatal } =
-    await loadVietnameseNews(sourceFilter);
+function VietnameseView({
+  load,
+  sourceFilter,
+}: {
+  load: VietnameseLoad;
+  sourceFilter: VnSourceId | null;
+}) {
+  const { items, trending, available, failures, errors, degraded, fatal } = load;
   const totalAiSignal = items.reduce((acc, it) => acc + it.ai_score, 0);
   const sourceCount = new Set(items.map((it) => it.source_id)).size;
   return (
