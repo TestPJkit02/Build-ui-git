@@ -365,6 +365,10 @@ describe("fetchVnNewsBundle (integration with mocked fetch)", () => {
     // Trending capped at 3 and only AI-relevant
     expect(bundle.trending.length).toBeLessThanOrEqual(3);
     expect(bundle.trending.every((it) => it.ai_score > 0)).toBe(true);
+    // Trending must be a subset of items so the page can dedup the
+    // "latest" stream against trending without losing data.
+    const itemIds = new Set(bundle.items.map((it) => it.id));
+    expect(bundle.trending.every((t) => itemIds.has(t.id))).toBe(true);
   });
 
   it("respects the optional sources filter", async () => {
