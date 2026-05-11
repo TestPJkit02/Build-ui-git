@@ -62,9 +62,13 @@ async function loadVietnameseNews(sourceFilter: VnSourceId | null): Promise<Viet
   try {
     const bundle = await fetchVnNewsBundle({ trendingTake: 5 });
     if (bundle.items.length === 0) {
+      // In fallback mode trending and items would otherwise share the same
+      // array; the page-level dedup (excluding trending IDs from latest)
+      // would then empty the latest panel. Surface fallback content in the
+      // latest panel only.
       return {
         items: FALLBACK_VN_NEWS,
-        trending: FALLBACK_VN_NEWS,
+        trending: [],
         available: VN_SOURCES.map((s) => s.id),
         failures: bundle.failures,
         errors: bundle.errors,
@@ -83,9 +87,11 @@ async function loadVietnameseNews(sourceFilter: VnSourceId | null): Promise<Viet
       degraded: bundle.failures.length > 0,
     };
   } catch (e) {
+    // Same reason as the empty-bundle fallback above: keep fallback content
+    // in the latest panel only so page-level dedup does not blank it out.
     return {
       items: FALLBACK_VN_NEWS,
-      trending: FALLBACK_VN_NEWS,
+      trending: [],
       available: VN_SOURCES.map((s) => s.id),
       failures: [],
       errors: {},
