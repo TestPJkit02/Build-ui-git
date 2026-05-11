@@ -257,11 +257,34 @@ function VietnameseView({
 
       <VnSourceFilter available={available} active={sourceFilter} />
 
-      {trending.length > 0 && sourceFilter === null && (
-        <VnNewsList items={trending} panelTitle="trending · ai signal × recency" showRank />
-      )}
-
-      <VnNewsList items={items} panelTitle="latest · all sources" activeSource={sourceFilter} />
+      {/*
+       * Trending is a subset of `items`. When both panels render, exclude
+       * trending entries from the "latest" stream so each story appears
+       * exactly once on the page.
+       */}
+      {(() => {
+        const showTrending = trending.length > 0 && sourceFilter === null;
+        const trendingIds = new Set(trending.map((t) => t.id));
+        const latestItems = showTrending
+          ? items.filter((it) => !trendingIds.has(it.id))
+          : items;
+        return (
+          <>
+            {showTrending && (
+              <VnNewsList
+                items={trending}
+                panelTitle="trending · ai signal × recency"
+                showRank
+              />
+            )}
+            <VnNewsList
+              items={latestItems}
+              panelTitle="latest · all sources"
+              activeSource={sourceFilter}
+            />
+          </>
+        );
+      })()}
     </>
   );
 }
